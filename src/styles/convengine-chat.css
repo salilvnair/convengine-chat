@@ -1,0 +1,1289 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   convengine-chat.css — Complete design-system for the ConvEngine Chat library
+   All styles are scoped inside .ce-chat-root to guarantee zero collision with
+   the host application's stylesheets.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── CSS custom properties (design tokens) ─────────────────────────────────
+   Override any variable on .ce-chat-root to re-skin the chat without touching
+   the component markup.
+   ─────────────────────────────────────────────────────────────────────────── */
+.ce-chat-root {
+  /* Brand / accent */
+  --ce-color-accent:         #6366f1;  /* indigo-500 */
+  --ce-color-accent-hover:   #4f46e5;  /* indigo-600 */
+  --ce-color-accent-light:   rgba(99, 102, 241, 0.12);
+
+  /* Backgrounds */
+  --ce-bg-panel:             #ffffff;
+  --ce-bg-header:            #f8f9ff;
+  --ce-bg-bubble-user:       #6366f1;
+  --ce-bg-bubble-agent:      #f1f5f9;
+  --ce-bg-composer:          #ffffff;
+  --ce-bg-audit:             #f8fafc;
+
+  /* Text */
+  --ce-text-primary:         #1e293b;
+  --ce-text-secondary:       #64748b;
+  --ce-text-bubble-user:     #ffffff;
+  --ce-text-bubble-agent:    #1e293b;
+  --ce-text-placeholder:     #94a3b8;
+
+  /* Error */
+  --ce-color-error:          #ef4444;
+  --ce-bg-bubble-error:      rgba(239, 68, 68, 0.08);
+  --ce-text-error:           #b91c1c;
+
+  /* Surface / border */
+  --ce-border-color:         #e2e8f0;
+  --ce-shadow-panel:         0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+  --ce-shadow-fab:           0 4px 12px rgba(99,102,241,0.35);
+
+  /* Sizing */
+  --ce-panel-width:          460px;
+  --ce-panel-height:         660px;
+  --ce-sidepanel-width:      400px;
+  --ce-fab-size:             52px;
+  --ce-avatar-size:          34px;
+  --ce-radius-bubble:        16px;
+  --ce-radius-pill:          999px;
+  --ce-radius-panel:         16px;
+
+  /* Typography */
+  --ce-font-family:          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --ce-font-size-base:       14px;
+  --ce-font-size-sm:         12px;
+  --ce-line-height:          1.55;
+
+  /* Motion */
+  --ce-transition-fast:      150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ce-transition-med:       250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --ce-transition-spring:    350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Dark mode tokens ───────────────────────────────────────────────────── */
+.ce-chat-root[data-ce-theme="dark"] {
+  --ce-bg-panel:             #1a1f2e;
+  --ce-bg-header:            #141824;
+  --ce-bg-bubble-user:       #6366f1;
+  --ce-bg-bubble-agent:      #252d3d;
+  --ce-bg-composer:          #1f2636;
+  --ce-bg-audit:             #131720;
+
+  --ce-text-primary:         #e2e8f0;
+  --ce-text-secondary:       #94a3b8;
+  --ce-text-bubble-agent:    #e2e8f0;
+  --ce-text-placeholder:     #475569;
+
+  --ce-border-color:         #2d3748;
+  --ce-shadow-panel:         0 4px 32px rgba(0,0,0,0.45);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FOUNDATION — reset & base
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root *,
+.ce-chat-root *::before,
+.ce-chat-root *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.ce-chat-root {
+  font-family: var(--ce-font-family);
+  font-size: var(--ce-font-size-base);
+  line-height: var(--ce-line-height);
+  color: var(--ce-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ICONS
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FULLSCREEN MODE
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-fullscreen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--ce-bg-panel);
+  overflow: hidden;
+}
+
+/* ── Engine status chip bar (fullscreen only) ─────────────────────────────── */
+.ce-chat-root .ce-engine-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--ce-border-color);
+  flex-shrink: 0;
+}
+
+.ce-chat-root .ce-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--chip-color) 35%, transparent);
+  background: color-mix(in srgb, var(--chip-color) 10%, transparent);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.ce-chat-root .ce-status-chip-label {
+  color: var(--chip-color);
+  font-weight: 600;
+}
+
+.ce-chat-root .ce-status-chip-value {
+  color: var(--ce-text-primary);
+}
+
+/* Fallback for browsers without color-mix */
+@supports not (color: color-mix(in srgb, red 10%, blue)) {
+  .ce-chat-root .ce-status-chip {
+    border-color: currentColor;
+    background: transparent;
+    opacity: 0.8;
+  }
+}
+
+/* ── Fullscreen thread — centered messages with max-width ─────────────────── */
+.ce-chat-root .ce-thread--fullscreen {
+  padding: 24px 0;
+}
+
+.ce-chat-root .ce-thread--fullscreen .ce-message,
+.ce-chat-root .ce-thread--fullscreen .ce-message-thinking,
+.ce-chat-root .ce-thread--fullscreen .ce-feedback-row {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* ── Fullscreen footer — floating pill, no border-top ─────────────────────── */
+.ce-chat-root .ce-footer--fullscreen {
+  border-top: none;
+  padding: 12px 24px 28px;
+  background: transparent;
+}
+
+.ce-chat-root .ce-composer--fullscreen {
+  max-width: 680px;
+  margin: 0 auto;
+  border-radius: 30px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.10);
+  padding: 10px 10px 10px 20px;
+}
+
+.ce-chat-root .ce-composer--fullscreen .ce-composer-send {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+/* ── Fullscreen landing — no avatar, bigger title ─────────────────────────── */
+.ce-chat-root .ce-landing--fullscreen {
+  gap: 28px;
+}
+
+.ce-chat-root .ce-landing--fullscreen .ce-landing-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+}
+
+.ce-chat-root .ce-landing--fullscreen .ce-composer--fullscreen {
+  width: 100%;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PANEL MODE — floating card
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-panel {
+  position: fixed;
+  z-index: 9999;
+  width: var(--ce-panel-width);
+  max-height: var(--ce-panel-height);
+  display: flex;
+  flex-direction: column;
+  background: var(--ce-bg-panel);
+  border-radius: var(--ce-radius-panel);
+  box-shadow: var(--ce-shadow-panel);
+  border: 1px solid var(--ce-border-color);
+  overflow: hidden;
+  /* Smooth open/close */
+  transition: opacity var(--ce-transition-med), transform var(--ce-transition-spring),
+    max-height var(--ce-transition-med);
+}
+
+.ce-chat-root .ce-panel--bottom { bottom: calc(var(--ce-fab-size) + 24px); }
+.ce-chat-root .ce-panel--top    { top:    calc(var(--ce-fab-size) + 24px); }
+.ce-chat-root .ce-panel--right  { right: 24px; }
+.ce-chat-root .ce-panel--left   { left:  24px; }
+
+.ce-chat-root .ce-panel--closed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px) scale(0.97);
+}
+
+.ce-chat-root .ce-panel--open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0) scale(1);
+}
+
+.ce-chat-root .ce-panel--minimized {
+  opacity: 1;
+  pointer-events: all;
+  max-height: 56px;        /* just the header */
+  transform: translateY(0) scale(1);
+}
+
+/* ── FAB button ─────────────────────────────────────────────────────────── */
+.ce-chat-root .ce-fab {
+  position: fixed;
+  z-index: 9999;
+  width: var(--ce-fab-size);
+  height: var(--ce-fab-size);
+  border-radius: 50%;
+  border: none;
+  background: var(--ce-color-accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--ce-shadow-fab);
+  transition: background var(--ce-transition-fast), transform var(--ce-transition-fast),
+    box-shadow var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-fab:hover { background: var(--ce-color-accent-hover); transform: scale(1.06); }
+.ce-chat-root .ce-fab:active { transform: scale(0.96); }
+.ce-chat-root .ce-fab--active { background: var(--ce-color-accent-hover); }
+
+.ce-chat-root .ce-fab--bottom { bottom: 24px; }
+.ce-chat-root .ce-fab--top    { top: 24px; }
+.ce-chat-root .ce-fab--right  { right: 24px; }
+.ce-chat-root .ce-fab--left   { left: 24px; }
+
+.ce-chat-root .ce-fab svg { width: 24px; height: 24px; }
+
+.ce-chat-root .ce-fab-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity var(--ce-transition-fast), transform var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-fab-icon--hidden { opacity: 0; transform: scale(0.6) rotate(30deg); pointer-events: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--ce-bg-header);
+  border-bottom: 1px solid var(--ce-border-color);
+  flex-shrink: 0;
+  min-height: 56px;
+}
+
+.ce-chat-root .ce-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ce-chat-root .ce-header-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ce-color-accent);
+  flex-shrink: 0;
+  animation: ce-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ce-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+.ce-chat-root .ce-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ce-chat-root .ce-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ce-chat-root .ce-header-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ce-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--ce-transition-fast), color var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-header-btn svg { width: 16px; height: 16px; }
+.ce-chat-root .ce-header-btn:hover { background: var(--ce-color-accent-light); color: var(--ce-color-accent); }
+.ce-chat-root .ce-header-btn--active { color: var(--ce-color-accent); background: var(--ce-color-accent-light); }
+.ce-chat-root .ce-header-btn--close:hover { background: rgba(239,68,68,0.1); color: var(--ce-color-error); }
+
+/* ── Mode-picker dropdown ─────────────────────────────────────── */
+.ce-chat-root .ce-mode-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: var(--ce-bg-panel);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 4px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ce-chat-root .ce-mode-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ce-text-primary);
+  text-align: left;
+  transition: background 0.12s;
+  width: 100%;
+}
+
+.ce-chat-root .ce-mode-menu-item:hover {
+  background: var(--ce-color-accent-light);
+  color: var(--ce-color-accent);
+}
+
+.ce-chat-root .ce-mode-menu-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CHAT BODY (thread + optional audit sidebar)
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-chat-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ce-chat-root .ce-chat-body--with-audit {
+  flex-direction: row;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   THREAD
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-thread {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 18px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+.ce-chat-root .ce-thread::-webkit-scrollbar { width: 4px; }
+.ce-chat-root .ce-thread::-webkit-scrollbar-track { background: transparent; }
+.ce-chat-root .ce-thread::-webkit-scrollbar-thumb {
+  background: var(--ce-border-color);
+  border-radius: 99px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MESSAGES
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  animation: ce-msg-in var(--ce-transition-med) both;
+}
+
+@keyframes ce-msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* User — right-aligned */
+.ce-chat-root .ce-message--user {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+
+/* Wide variant for table responses */
+.ce-chat-root .ce-message--wide {
+  align-items: flex-start;
+}
+
+/* ── Avatars ─────────────────────────────────────────────────────────────── */
+.ce-chat-root .ce-avatar {
+  width: var(--ce-avatar-size);
+  height: var(--ce-avatar-size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.ce-chat-root .ce-avatar--user {
+  background: var(--ce-color-accent-light);
+  color: var(--ce-color-accent);
+}
+
+.ce-chat-root .ce-avatar--agent {
+  background: var(--ce-bg-bubble-agent);
+  color: var(--ce-text-secondary);
+  border: 1px solid var(--ce-border-color);
+}
+
+.ce-chat-root .ce-avatar--thinking {
+  animation: ce-avatar-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes ce-avatar-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px var(--ce-color-accent-light); }
+}
+
+.ce-chat-root .ce-avatar--error {
+  background: rgba(239,68,68,0.1);
+  color: var(--ce-color-error);
+  border-color: rgba(239,68,68,0.2);
+}
+
+.ce-chat-root .ce-avatar-error-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ce-color-error);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ce-chat-root .ce-avatar svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Bubbles ─────────────────────────────────────────────────────────────── */
+.ce-chat-root .ce-message-content {
+  max-width: min(72%, 480px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ce-chat-root .ce-message--user .ce-message-content {
+  align-items: flex-end;
+}
+
+.ce-chat-root .ce-message--wide .ce-message-content {
+  max-width: 100%;
+}
+
+.ce-chat-root .ce-bubble {
+  padding: 11px 16px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  width: fit-content;
+  max-width: 100%;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+/* Both shape classes → same rounded-rectangle */
+.ce-chat-root .ce-bubble--pill,
+.ce-chat-root .ce-bubble--rect { border-radius: 18px; }
+
+/* ── User bubble — sharp bottom-right corner (speech tail) ─────────── */
+.ce-chat-root .ce-bubble--user {
+  background: var(--ce-bg-bubble-user);
+  color: var(--ce-text-bubble-user);
+  border-radius: 20px 20px 4px 20px;
+}
+
+/* ── Agent bubble — sharp bottom-left corner (speech tail) ─────────── */
+.ce-chat-root .ce-bubble--agent {
+  background: var(--ce-bg-bubble-agent);
+  color: var(--ce-text-bubble-agent);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 20px 20px 20px 4px;
+}
+
+/* Error state */
+.ce-chat-root .ce-bubble--error {
+  background: var(--ce-bg-bubble-error);
+  border-color: rgba(239,68,68,0.25);
+}
+
+.ce-chat-root .ce-bubble-text {
+  font-family: inherit;
+  font-size: var(--ce-font-size-base);
+  line-height: var(--ce-line-height);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.ce-chat-root .ce-bubble-text--error {
+  color: var(--ce-text-error);
+}
+
+.ce-chat-root .ce-error-prefix {
+  margin-right: 6px;
+  opacity: 0.8;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TYPING INDICATOR — glossy reflection sweep (no bubble, no border)
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-thinking-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.ce-chat-root .ce-thinking-dots { display: none; }
+
+.ce-chat-root .ce-thinking-text {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 400;
+  font-family: ui-monospace, "SF Mono", "Consolas", "Liberation Mono", monospace;
+  letter-spacing: 0.01em;
+  color: transparent;
+  background-image: linear-gradient(
+    110deg,
+    var(--ce-text-secondary) 0%,
+    var(--ce-text-secondary) 42%,
+    rgba(255, 255, 255, 0.92) 50%,
+    var(--ce-text-secondary) 58%,
+    var(--ce-text-secondary) 100%
+  );
+  background-size: 400% 100%;
+  background-position: 210% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  will-change: background-position;
+  animation: ce-thinking-sweep 5s linear infinite;
+}
+
+/* Dark mode — use a brighter flash */
+.ce-chat-root[data-ce-theme="dark"] .ce-thinking-text {
+  background-image: linear-gradient(
+    110deg,
+    #64748b 0%,
+    #64748b 42%,
+    rgba(220, 230, 255, 0.95) 50%,
+    #64748b 58%,
+    #64748b 100%
+  );
+}
+
+@keyframes ce-thinking-sweep {
+  0%   { background-position: 210% 50%; }
+  15%  { background-position: 210% 50%; }
+  85%  { background-position: -10%  50%; }
+  100% { background-position: -10%  50%; }
+}
+
+@keyframes ce-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+  40%           { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FEEDBACK ROW
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-feedback-row {
+  display: flex;
+  gap: 4px;
+  padding: 2px 0 0 calc(var(--ce-avatar-size) + 10px);
+  margin-top: -8px;
+}
+
+.ce-chat-root .ce-feedback-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--ce-border-color);
+  background: transparent;
+  color: var(--ce-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--ce-transition-fast), color var(--ce-transition-fast),
+    border-color var(--ce-transition-fast), transform var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-feedback-btn svg { width: 14px; height: 14px; }
+.ce-chat-root .ce-feedback-btn:hover:not(:disabled) {
+  background: var(--ce-color-accent-light);
+  color: var(--ce-color-accent);
+  border-color: var(--ce-color-accent);
+  transform: scale(1.1);
+}
+
+.ce-chat-root .ce-feedback-btn--active {
+  background: var(--ce-color-accent-light);
+  color: var(--ce-color-accent);
+  border-color: var(--ce-color-accent);
+}
+
+.ce-chat-root .ce-feedback-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FOOTER / COMPOSER
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-footer {
+  flex-shrink: 0;
+  padding: 12px 16px 14px;
+  background: var(--ce-bg-panel);
+  border-top: 1px solid var(--ce-border-color);
+}
+
+.ce-chat-root .ce-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  background: var(--ce-bg-composer);
+  border: 1.5px solid var(--ce-border-color);
+  border-radius: 14px;
+  padding: 6px 6px 6px 14px;
+  transition: border-color var(--ce-transition-fast), box-shadow var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-composer:focus-within {
+  border-color: var(--ce-color-accent);
+  box-shadow: 0 0 0 3px var(--ce-color-accent-light);
+}
+
+.ce-chat-root .ce-composer--centered {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.ce-chat-root .ce-composer-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--ce-font-size-base);
+  line-height: var(--ce-line-height);
+  color: var(--ce-text-primary);
+  /* Vertical padding makes single-line height ≈ send button height (34px),
+     so text + button look perfectly centred even though the flex axis is flex-end. */
+  padding-top: 6px;
+  padding-bottom: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+
+.ce-chat-root .ce-composer-input::placeholder {
+  color: var(--ce-text-placeholder);
+}
+
+.ce-chat-root .ce-composer-input { scrollbar-width: none; -ms-overflow-style: none; }
+.ce-chat-root .ce-composer-input::-webkit-scrollbar { width: 0; height: 0; }
+
+.ce-chat-root .ce-composer-send {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: var(--ce-color-accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--ce-transition-fast), transform var(--ce-transition-fast),
+    opacity var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-composer-send svg { width: 16px; height: 16px; }
+.ce-chat-root .ce-composer-send:hover:not(:disabled) {
+  background: var(--ce-color-accent-hover);
+  transform: scale(1.06);
+}
+
+.ce-chat-root .ce-composer-send:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LANDING SCREEN
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  gap: 32px;
+  overflow: hidden;
+}
+
+.ce-chat-root .ce-landing-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.ce-chat-root .ce-landing-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--ce-color-accent-light);
+  color: var(--ce-color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ce-chat-root .ce-landing-avatar svg { width: 40px; height: 40px; }
+
+.ce-chat-root .ce-landing-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ce-text-primary);
+  line-height: 1.3;
+}
+
+.ce-chat-root .ce-landing-subtitle {
+  font-size: var(--ce-font-size-sm);
+  color: var(--ce-text-secondary);
+  max-width: 260px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TABLE RENDERER
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--ce-border-color);
+  margin: 8px 0;
+}
+
+.ce-chat-root .ce-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--ce-font-size-sm);
+}
+
+.ce-chat-root .ce-table-th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ce-text-secondary);
+  background: var(--ce-bg-header);
+  border-bottom: 1px solid var(--ce-border-color);
+  white-space: nowrap;
+}
+
+.ce-chat-root .ce-table-tr:nth-child(even) {
+  background: rgba(0,0,0,0.02);
+}
+
+.ce-chat-root .ce-table-td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ce-border-color);
+  color: var(--ce-text-primary);
+  vertical-align: top;
+}
+
+.ce-chat-root .ce-table-tr:last-child .ce-table-td {
+  border-bottom: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FAQ ANSWER RENDERER
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-faq-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.ce-chat-root .ce-faq-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.ce-chat-root .ce-faq-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f766e;
+  background: rgba(20, 184, 166, 0.14);
+  border: 1px solid rgba(13, 148, 136, 0.35);
+}
+
+.ce-chat-root .ce-faq-confidence {
+  position: absolute;
+  top: -22px;
+  right: -12px;
+  min-width: 36px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(37, 99, 235, 0.4);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   AUDIT PANEL
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-audit-panel {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--ce-border-color);
+  background: var(--ce-bg-audit);
+  overflow: hidden;
+}
+
+.ce-chat-root .ce-audit-panel-header {
+  padding: 10px 12px;
+  font-size: var(--ce-font-size-sm);
+  font-weight: 600;
+  color: var(--ce-text-secondary);
+  border-bottom: 1px solid var(--ce-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.ce-chat-root .ce-audit-panel-title {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 10px;
+}
+
+.ce-chat-root .ce-audit-loading {
+  font-size: 10px;
+  color: var(--ce-color-accent);
+  animation: ce-pulse 1s ease-in-out infinite;
+}
+
+.ce-chat-root .ce-audit-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ce-chat-root .ce-audit-entry {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--ce-border-color);
+  background: var(--ce-bg-panel);
+}
+
+.ce-chat-root .ce-audit-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-left: 3px solid #94a3b8;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-audit-entry-header:hover {
+  background: var(--ce-color-accent-light);
+}
+
+.ce-chat-root .ce-audit-stage {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+  word-break: break-all;
+}
+
+.ce-chat-root .ce-audit-chevron {
+  width: 12px;
+  height: 12px;
+  color: var(--ce-text-secondary);
+  flex-shrink: 0;
+  transition: transform var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-audit-chevron--open {
+  transform: rotate(180deg);
+}
+
+.ce-chat-root .ce-audit-payload {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  color: var(--ce-text-secondary);
+  padding: 8px;
+  border-top: 1px solid var(--ce-border-color);
+  background: var(--ce-bg-header);
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ce-chat-root .ce-audit-empty,
+.ce-chat-root .ce-audit-error {
+  font-size: var(--ce-font-size-sm);
+  color: var(--ce-text-secondary);
+  text-align: center;
+  padding: 16px 8px;
+}
+
+.ce-chat-root .ce-audit-error { color: var(--ce-color-error); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — narrow screens collapse panel to near-full-width
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .ce-chat-root .ce-panel {
+    --ce-panel-width: calc(100vw - 24px);
+    --ce-panel-height: 75vh;
+  }
+
+  .ce-chat-root .ce-panel--right,
+  .ce-chat-root .ce-panel--left {
+    left: 12px;
+    right: 12px;
+  }
+
+  .ce-chat-root .ce-audit-panel {
+    display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   INTERACTIVE RENDERER PRIMITIVES
+   Consumed by consumer-supplied renderer Components (selection, forms, etc.)
+   All tokens inherit from .ce-chat-root so dark mode just works.
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-interactive-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--ce-bg-surface, #ffffff);
+  border: 1px solid var(--ce-border, rgba(0,0,0,.1));
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--ce-fg, #1e293b);
+}
+
+.ce-chat-root .ce-interactive-question {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ce-fg, #1e293b);
+  line-height: 1.4;
+}
+
+.ce-chat-root .ce-interactive-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ce-chat-root .ce-interactive-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.ce-chat-root .ce-interactive-option:hover {
+  background: var(--ce-color-accent, #6366f1);
+  color: #fff;
+  opacity: 0.9;
+}
+.ce-chat-root .ce-interactive-option input {
+  accent-color: var(--ce-color-accent, #6366f1);
+  flex-shrink: 0;
+}
+
+.ce-chat-root .ce-interactive-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ce-chat-root .ce-interactive-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ce-fg-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ce-chat-root .ce-interactive-input,
+.ce-chat-root .ce-interactive-select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--ce-border, rgba(0,0,0,.12));
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--ce-bg-surface, #fff);
+  color: var(--ce-fg, #1e293b);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+.ce-chat-root .ce-interactive-input:focus,
+.ce-chat-root .ce-interactive-select:focus {
+  border-color: var(--ce-color-accent, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ce-color-accent, #6366f1) 20%, transparent);
+}
+
+.ce-chat-root .ce-interactive-submit {
+  align-self: flex-end;
+  padding: 7px 16px;
+  background: var(--ce-color-accent, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.ce-chat-root .ce-interactive-submit:hover:not(:disabled) {
+  background: var(--ce-color-accent-hover, #4f46e5);
+}
+.ce-chat-root .ce-interactive-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PANEL — MAXIMIZED STATE
+   Panel expands to fill most of the viewport, centred.
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-panel--maximized {
+  /* Override the corner positioning set by --bottom/--top/--left/--right */
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(92vw, 960px) !important;
+  max-height: 90vh !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 20px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SIDEPANEL MODE — full-height side drawer
+   mode="sidepanel" align="left"|"right"
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root .ce-sidepanel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 9999;
+  width: var(--ce-sidepanel-width, 400px);
+  display: flex;
+  flex-direction: column;
+  background: var(--ce-bg-panel);
+  border: 1px solid var(--ce-border-color);
+  box-shadow: var(--ce-shadow-panel);
+  overflow: hidden;
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ensure footer/composer fills width fully in sidepanel */
+.ce-chat-root .ce-sidepanel .ce-footer {
+  padding: 14px 20px 18px;
+}
+
+.ce-chat-root .ce-sidepanel .ce-composer {
+  width: 100%;
+  min-height: 52px;
+}
+
+.ce-chat-root .ce-sidepanel--right {
+  right: 0;
+  border-right: none;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.ce-chat-root .ce-sidepanel--left {
+  left: 0;
+  border-left: none;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+.ce-chat-root .ce-sidepanel--right.ce-sidepanel--closed {
+  transform: translateX(102%);
+}
+
+.ce-chat-root .ce-sidepanel--left.ce-sidepanel--closed {
+  transform: translateX(-102%);
+}
+
+.ce-chat-root .ce-sidepanel--open {
+  transform: translateX(0);
+}
+
+/* Tab / handle that triggers the sidepanel */
+.ce-chat-root .ce-sidepanel-tab {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10000;
+  width: 26px;
+  height: 68px;
+  background: var(--ce-color-accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--ce-transition-fast), width var(--ce-transition-fast);
+}
+
+.ce-chat-root .ce-sidepanel-tab:hover {
+  background: var(--ce-color-accent-hover);
+  width: 30px;
+}
+
+.ce-chat-root .ce-sidepanel-tab--right {
+  right: 0;
+  border-radius: 10px 0 0 10px;
+}
+
+.ce-chat-root .ce-sidepanel-tab--left {
+  left: 0;
+  border-radius: 0 10px 10px 0;
+}
+
+.ce-chat-root .ce-sidepanel-tab svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media (max-width: 480px) {
+  .ce-chat-root .ce-sidepanel {
+    --ce-sidepanel-width: 100vw;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}

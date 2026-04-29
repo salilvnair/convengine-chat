@@ -1,0 +1,49 @@
+{
+  "name": "convengine-chat",
+  "version": "0.1.0",
+  "description": "React chat component library for the ConvEngine conversational AI framework",
+  "type": "module",
+  "main": "./dist/convengine-chat.umd.cjs",
+  "module": "./dist/convengine-chat.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/convengine-chat.es.js",
+      "require": "./dist/convengine-chat.umd.cjs"
+    },
+    "./style.css": "./dist/convengine-chat.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .js,.jsx"
+  },
+  "keywords": [
+    "convengine",
+    "chat",
+    "react",
+    "ai",
+    "conversational",
+    "chatbot",
+    "widget"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "vite": "^5.2.0"
+  }
+}
