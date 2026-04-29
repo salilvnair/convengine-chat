@@ -3,6 +3,7 @@ import { useChat } from '../../hooks/useChat.js';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
+import { NewChatIcon } from '../../icons/Icons.jsx';
 
 /**
  * Fullscreen / inline mode — no panel chrome, fills parent container.
@@ -28,6 +29,7 @@ export function FullscreenMode({ isDark, toggleTheme }) {
     submitSilent,
     appendBubble,
     prefillInput,
+    resetChat,
     handleKeyDown,
     submitFeedback,
   } = useChat();
@@ -47,6 +49,16 @@ export function FullscreenMode({ isDark, toggleTheme }) {
   return (
     <ChatActionsContext.Provider value={chatActions}>
       <div className="ce-fullscreen">
+        <button
+          type="button"
+          className="ce-fullscreen-new-chat"
+          title="New chat"
+          aria-label="Start new chat"
+          onClick={resetChat}
+        >
+          <NewChatIcon />
+          New chat
+        </button>
         <ChatArea
           variant="fullscreen"
           isInitial={isInitial}

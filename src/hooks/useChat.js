@@ -197,6 +197,17 @@ export function useChat() {
     [],
   );
 
+  // ── resetChat — clear all conversation state ─────────────────────────────
+  const resetChat = useCallback(() => {
+    setMessages([]);
+    setInput('');
+    setIsTyping(false);
+    setProgressText('');
+    setEngineStatus(null);
+    setAuditRevision(0);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
   // ── Enter key handler ────────────────────────────────────────────────────
   const handleKeyDown = useCallback(
     (e) => {
@@ -271,6 +282,7 @@ export function useChat() {
     submitSilent,
     appendBubble,
     prefillInput,
+    resetChat,
     handleKeyDown,
     submitFeedback,
     scrollToBottom,

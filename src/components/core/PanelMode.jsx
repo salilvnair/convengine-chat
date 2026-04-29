@@ -4,7 +4,7 @@ import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.js
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
-import { ChatBubbleIcon, CloseIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, LayoutIcon } from '../../icons/Icons.jsx';
+import { ChatBubbleIcon, CloseIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon } from '../../icons/Icons.jsx';
 
 /**
  * Panel mode — a floating FAB button that opens a chat panel anchored to a
@@ -51,6 +51,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
     submitSilent,
     appendBubble,
     prefillInput,
+    resetChat,
     handleKeyDown,
     submitFeedback,
   } = useChat();
@@ -82,12 +83,22 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
     : 'ce-panel--closed';
 
   const modeOptions = [
-    { id: 'sidepanel-left',  label: '← Left Side',   icon: '◁' },
-    { id: 'sidepanel-right', label: 'Right Side →',  icon: '▷' },
+    { id: 'sidepanel-left',  label: 'Show in Left Panel',  Icon: PanelLeftIcon },
+    { id: 'sidepanel-right', label: 'Show in Right Panel', Icon: PanelRightIcon },
   ];
 
   const headerActions = (
     <>
+      {/* New Chat */}
+      <button
+        type="button"
+        className="ce-header-btn"
+        title="New chat"
+        aria-label="Start new chat"
+        onClick={resetChat}
+      >
+        <NewChatIcon />
+      </button>
       {/* Mode picker */}
       {onModeChange && (
         <div ref={modeMenuRef} style={{ position: 'relative' }}>
@@ -114,7 +125,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
                     onModeChange(opt.id);
                   }}
                 >
-                  <span className="ce-mode-menu-icon">{opt.icon}</span>
+                  <opt.Icon style={{ width: 15, height: 15, marginRight: 6 }} />
                   {opt.label}
                 </button>
               ))}

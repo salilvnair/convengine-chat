@@ -4,7 +4,7 @@ import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.js
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
-import { ChatBubbleIcon, CloseIcon, LayoutIcon } from '../../icons/Icons.jsx';
+import { ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon } from '../../icons/Icons.jsx';
 
 /**
  * Sidepanel mode — a full-height drawer anchored to the left or right edge.
@@ -47,6 +47,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     submitSilent,
     appendBubble,
     prefillInput,
+    resetChat,
     handleKeyDown,
     submitFeedback,
   } = useChat();
@@ -64,13 +65,23 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
   );
 
   const modeOptions = [
-    { id: 'panel',           label: 'Panel (FAB)',   icon: '⊞' },
-    { id: 'sidepanel-left',  label: '← Left Side',   icon: '◁' },
-    { id: 'sidepanel-right', label: 'Right Side →',  icon: '▷' },
+    { id: 'panel',           label: 'Panel (FAB)',        Icon: LayoutIcon },
+    { id: 'sidepanel-left',  label: 'Show in Left Panel',  Icon: PanelLeftIcon },
+    { id: 'sidepanel-right', label: 'Show in Right Panel', Icon: PanelRightIcon },
   ];
 
   const headerActions = (
     <>
+      {/* New Chat */}
+      <button
+        type="button"
+        className="ce-header-btn"
+        title="New chat"
+        aria-label="Start new chat"
+        onClick={resetChat}
+      >
+        <NewChatIcon />
+      </button>
       {onModeChange && (
         <div ref={modeMenuRef} style={{ position: 'relative' }}>
           <button
@@ -96,7 +107,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
                     onModeChange(opt.id);
                   }}
                 >
-                  <span className="ce-mode-menu-icon">{opt.icon}</span>
+                  <opt.Icon style={{ width: 15, height: 15, marginRight: 6 }} />
                   {opt.label}
                 </button>
               ))}

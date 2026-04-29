@@ -122,6 +122,36 @@
   height: 100%;
   background: var(--ce-bg-panel);
   overflow: hidden;
+  position: relative;
+}
+
+/* New Chat button — top-right corner of fullscreen mode */
+.ce-chat-root .ce-fullscreen-new-chat {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--ce-border-color);
+  border-radius: 20px;
+  background: var(--ce-bg-panel);
+  color: var(--ce-fg-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ce-chat-root .ce-fullscreen-new-chat:hover {
+  background: var(--ce-bg-hover);
+  color: var(--ce-fg);
+  border-color: var(--ce-color-accent);
+}
+.ce-chat-root .ce-fullscreen-new-chat .ce-icon {
+  width: 13px;
+  height: 13px;
 }
 
 /* ── Engine status chip bar (fullscreen only) ─────────────────────────────── */

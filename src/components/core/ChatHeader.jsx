@@ -1,4 +1,4 @@
-import { AuditIcon, MinimizeIcon, MoonIcon, SunIcon } from '../../icons/Icons.jsx';
+import { AuditIcon, MinimizeIcon, MoonIcon, SunIcon, NewChatIcon } from '../../icons/Icons.jsx';
 
 /**
  * Top bar of the chat panel / fullscreen mode.
@@ -12,6 +12,7 @@ export function ChatHeader({
   auditOpen = false,
   onToggleTheme,
   onToggleAudit,
+  onNewChat,
   // Optional slot for panel mode (minimize / close)
   actions,
 }) {
@@ -23,6 +24,17 @@ export function ChatHeader({
       </div>
 
       <div className="ce-header-actions">
+        {onNewChat && (
+          <button
+            type="button"
+            className="ce-header-btn"
+            title="New chat"
+            aria-label="Start new chat"
+            onClick={onNewChat}
+          >
+            <NewChatIcon />
+          </button>
+        )}
         {showAudit && (
           <button
             type="button"
