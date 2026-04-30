@@ -5,7 +5,11 @@ import { ChatComposer } from './ChatComposer.jsx';
  */
 export function ChatLanding({
   fullscreen = false,
-  title = 'How can I help you today?',
+  hideComposer = false,
+  title = 'ConvEngine Assistant',
+  subtitle = "Ask me anything — I'll do my best to help.",
+  showAvatar = true,
+  showSubtitle = true,
   input,
   isTyping,
   isMultiLine,
@@ -18,7 +22,7 @@ export function ChatLanding({
   return (
     <div className={`ce-landing ${fullscreen ? 'ce-landing--fullscreen' : ''}`}>
       <div className="ce-landing-hero">
-        {!fullscreen && (
+        {showAvatar && !fullscreen && (
           <div className="ce-landing-avatar" aria-hidden="true">
             <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="20" cy="20" r="20" fill="currentColor" opacity="0.12" />
@@ -35,23 +39,25 @@ export function ChatLanding({
           </div>
         )}
         <h2 className="ce-landing-title">{title}</h2>
-        {!fullscreen && (
-          <p className="ce-landing-subtitle">Ask me anything — I&apos;ll do my best to help.</p>
+        {showSubtitle && !fullscreen && (
+          <p className="ce-landing-subtitle">{subtitle}</p>
         )}
       </div>
 
-      <ChatComposer
-        centered
-        fullscreen={fullscreen}
-        inputRef={inputRef}
-        input={input}
-        isTyping={isTyping}
-        isMultiLine={isMultiLine}
-        onInputChange={onInputChange}
-        onKeyDown={onKeyDown}
-        onSend={onSend}
-        placeholder={placeholder}
-      />
+      {!hideComposer && (
+        <ChatComposer
+          centered
+          fullscreen={fullscreen}
+          inputRef={inputRef}
+          input={input}
+          isTyping={isTyping}
+          isMultiLine={isMultiLine}
+          onInputChange={onInputChange}
+          onKeyDown={onKeyDown}
+          onSend={onSend}
+          placeholder={placeholder}
+        />
+      )}
     </div>
   );
 }

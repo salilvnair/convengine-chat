@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useState, useRef } from 'react';
 import { createApiClient } from '../api/client.js';
 import { createClientId } from '../utils/uuid.js';
 
@@ -29,14 +29,35 @@ export function ConvEngineChatProvider({ config = {}, children }) {
 
   const resolvedConfig = useMemo(
     () => ({
-      title: config.title ?? 'How can I help you today?',
-      placeholder: config.placeholder ?? 'Ask ConvEngine…',
-      showAudit: config.showAudit ?? false,
-      showFeedback: config.showFeedback ?? true,
+      // ── Text content — all consumer-overrideable ────────────────────────
+      title:             config.title            ?? 'ConvEngine Assistant',
+      subtitle:          config.subtitle         ?? "Ask me anything \u2014 I\u2019ll do my best to help.",
+      placeholder:       config.placeholder      ?? 'Ask ConvEngine\u2026',
+      // ── Visibility toggles ─────────────────────────────────────────────
+      showAudit:             config.showAudit             ?? false,
+      showFeedback:          config.showFeedback          ?? true,
       showDarkModeLightMode: config.showDarkModeLightMode ?? false,
+      defaultDark:           config.defaultDark           ?? false,
+      showHeaderDot:         config.showHeaderDot         ?? true,
+      showLandingAvatar:     config.showLandingAvatar     ?? true,
+      showLandingSubtitle:   config.showLandingSubtitle   ?? true,
+      showNewChat:           config.showNewChat           ?? true,
+      showLayoutPicker:      config.showLayoutPicker      ?? true,
+      showMaximize:          config.showMaximize          ?? true,
+      showMinimize:          config.showMinimize          ?? true,
+      // ── Renderers & callbacks ──────────────────────────────────────────
       rendererProviders: Array.isArray(config.renderers) ? config.renderers : [],
-      onMessage: config.onMessage ?? null,
+      onMessage:  config.onMessage  ?? null,
       onResponse: config.onResponse ?? null,
+      // ── Consumer icon overrides ────────────────────────────────────────
+      icons: config.icons ?? {},
+      // ── Color overrides (shorthand; applied as CSS vars on root) ──────
+      bubbleUserBg:    config.bubbleUserBg    ?? null,
+      bubbleUserText:  config.bubbleUserText  ?? null,
+      bubbleAgentBg:   config.bubbleAgentBg   ?? null,
+      bubbleAgentText: config.bubbleAgentText ?? null,
+      panelBg:         config.panelBg         ?? null,
+      composerBg:      config.composerBg      ?? null,
     }),
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.
@@ -49,8 +70,28 @@ export function ConvEngineChatProvider({ config = {}, children }) {
     [conversationId, apiClient, resolvedConfig],
   );
 
+  // ── Shared chat state — lives here so it survives mode switches ──────────
+  const [messages,      setMessages]      = useState([]);
+  const [input,         setInput]         = useState('');
+  const [isTyping,      setIsTyping]      = useState(false);
+  const [progressText,  setProgressText]  = useState('');
+  const [auditRevision, setAuditRevision] = useState(0);
+  const threadRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  const chatState = useMemo(() => ({
+    messages,      setMessages,
+    input,         setInput,
+    isTyping,      setIsTyping,
+    progressText,  setProgressText,
+    auditRevision, setAuditRevision,
+    threadRef,
+    inputRef,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [messages, input, isTyping, progressText, auditRevision]);
+
   return (
-    <ConvEngineChatContext.Provider value={ctx}>
+    <ConvEngineChatContext.Provider value={{ ...ctx, chatState }}>
       {children}
     </ConvEngineChatContext.Provider>
   );

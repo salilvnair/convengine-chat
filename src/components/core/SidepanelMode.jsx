@@ -1,10 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useChat } from '../../hooks/useChat.js';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
-import { ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon } from '../../icons/Icons.jsx';
 
 /**
  * Sidepanel mode — a full-height drawer anchored to the left or right edge.
@@ -15,9 +15,13 @@ import { ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, Pane
  */
 export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange }) {
   const { config } = useConvEngineChatContext();
-  const [isOpen, setIsOpen] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
-  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const {
+    AuditIcon, ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
+  } = useIcons();
+  const [isOpen,         setIsOpen]         = useState(false);
+  const [auditOpen,      setAuditOpen]      = useState(false);
+  const [confirmNewChat, setConfirmNewChat] = useState(false);
+  const [modeMenuOpen,   setModeMenuOpen]   = useState(false);
   const modeMenuRef = useRef(null);
 
   useEffect(() => {
@@ -64,10 +68,16 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     [submitFromRenderer, submitSilent, appendBubble, prefillInput],
   );
 
+  // ── New chat with confirmation ────────────────────────────────────────────
+  const handleNewChat = () => {
+    if (messages.length > 0) setConfirmNewChat(true);
+    else resetChat();
+  };
+
   const modeOptions = [
-    { id: 'panel',           label: 'Panel (FAB)',        Icon: LayoutIcon },
-    { id: 'sidepanel-left',  label: 'Show in Left Panel',  Icon: PanelLeftIcon },
-    { id: 'sidepanel-right', label: 'Show in Right Panel', Icon: PanelRightIcon },
+    { id: 'panel',           label: 'Panel (FAB)',         Icon: LayoutIcon     },
+    { id: 'sidepanel-left',  label: 'Left Side',  Icon: PanelLeftIcon  },
+    { id: 'sidepanel-right', label: 'Right Side', Icon: PanelRightIcon },
   ];
 
   const headerActions = (
@@ -78,10 +88,26 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
         className="ce-header-btn"
         title="New chat"
         aria-label="Start new chat"
-        onClick={resetChat}
+        onClick={handleNewChat}
       >
         <NewChatIcon />
       </button>
+
+      {/* Audit toggle — only shown when showAudit is enabled */}
+      {config.showAudit && (
+        <button
+          type="button"
+          className={`ce-header-btn ${auditOpen ? 'ce-header-btn--active' : ''}`}
+          title={auditOpen ? 'Hide audit trail' : 'Show audit trail'}
+          aria-label={auditOpen ? 'Hide audit trail' : 'Show audit trail'}
+          aria-pressed={auditOpen}
+          onClick={() => setAuditOpen((v) => !v)}
+        >
+          <AuditIcon />
+        </button>
+      )}
+
+      {/* Mode picker */}
       {onModeChange && (
         <div ref={modeMenuRef} style={{ position: 'relative' }}>
           <button
@@ -115,6 +141,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
           )}
         </div>
       )}
+
       <button
         type="button"
         className="ce-header-btn ce-header-btn--close"
@@ -130,7 +157,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
   return (
     <ChatActionsContext.Provider value={chatActions}>
       <>
-        {/* ── FAB button (same as panel mode) ──────────────────────── */}
+        {/* ── FAB button (shown when drawer is closed) ──────────────────── */}
         {!isOpen && (
           <button
             type="button"
@@ -144,7 +171,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
           </button>
         )}
 
-        {/* ── Side drawer ──────────────────────────────────────────── */}
+        {/* ── Side drawer ───────────────────────────────────────────────── */}
         <div
           className={`ce-sidepanel ce-sidepanel--${align} ${isOpen ? 'ce-sidepanel--open' : 'ce-sidepanel--closed'}`}
           role="dialog"
@@ -152,14 +179,29 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
           aria-label="Chat panel"
           aria-hidden={!isOpen}
         >
+          {/* ── Confirm new-chat dialog — overlays only the sidepanel */}
+          {confirmNewChat && (
+            <div
+              className="ce-confirm-overlay"
+              style={{ position: 'absolute', inset: 0, zIndex: 10 }}
+            >
+              <div className="ce-confirm-dialog">
+                <p className="ce-confirm-msg">Start a new chat? Your current conversation will be cleared.</p>
+                <div className="ce-confirm-btns">
+                  <button className="ce-confirm-cancel" onClick={() => setConfirmNewChat(false)}>Cancel</button>
+                  <button className="ce-confirm-ok" onClick={() => { resetChat(); setConfirmNewChat(false); }}>New Chat</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <ChatHeader
             title={config.title}
             showDarkModeLightMode={config.showDarkModeLightMode}
-            showAudit={config.showAudit}
+            showAudit={false}
+            showHeaderDot={config.showHeaderDot}
             isDark={isDark}
-            auditOpen={auditOpen}
             onToggleTheme={toggleTheme}
-            onToggleAudit={() => setAuditOpen((v) => !v)}
             actions={headerActions}
           />
 
@@ -178,6 +220,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
             onFeedback={submitFeedback}
             auditRevision={auditRevision}
             auditOpen={auditOpen}
+            onCloseAudit={() => setAuditOpen(false)}
           />
         </div>
       </>

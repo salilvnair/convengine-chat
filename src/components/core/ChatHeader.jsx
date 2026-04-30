@@ -1,25 +1,33 @@
-import { AuditIcon, MinimizeIcon, MoonIcon, SunIcon, NewChatIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 
 /**
  * Top bar of the chat panel / fullscreen mode.
  * Renders the title and optional action buttons (dark-mode toggle, audit toggle).
  */
 export function ChatHeader({
-  title = 'ConvEngine Chat',
+  title = 'ConvEngine Assistant',
   showDarkModeLightMode = false,
   showAudit = false,
+  showHeaderDot = true,
   isDark = false,
   auditOpen = false,
   onToggleTheme,
   onToggleAudit,
   onNewChat,
+  // When set, the header brand area becomes a drag handle (used in popout mode)
+  onDragStart,
   // Optional slot for panel mode (minimize / close)
   actions,
 }) {
+  const { AuditIcon, MinimizeIcon, MoonIcon, SunIcon, NewChatIcon } = useIcons();
   return (
     <header className="ce-header">
-      <div className="ce-header-brand">
-        <span className="ce-header-dot" aria-hidden="true" />
+      <div
+        className="ce-header-brand"
+        onMouseDown={onDragStart}
+        style={onDragStart ? { cursor: 'move', userSelect: 'none' } : undefined}
+      >
+        {showHeaderDot && <span className="ce-header-dot" aria-hidden="true" />}
         <span className="ce-header-title">{title}</span>
       </div>
 

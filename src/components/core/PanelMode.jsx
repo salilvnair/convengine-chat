@@ -1,10 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useChat } from '../../hooks/useChat.js';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
-import { ChatBubbleIcon, CloseIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon } from '../../icons/Icons.jsx';
 
 /**
  * Panel mode — a floating FAB button that opens a chat panel anchored to a
@@ -16,14 +16,23 @@ import { ChatBubbleIcon, CloseIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, Lay
  */
 export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange }) {
   const { config } = useConvEngineChatContext();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
-  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const {
+    ChatBubbleIcon, CloseIcon, MinimizeIcon,
+    MaximizeIcon, RestoreIcon, RestoreFromMinIcon,
+    LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
+  } = useIcons();
+  const [isOpen,          setIsOpen]          = useState(false);
+  const [isMinimized,     setIsMinimized]     = useState(false);
+  const [isPopout,        setIsPopout]        = useState(false);
+  const [popoutPos,       setPopoutPos]       = useState({ x: null, y: null });
+  // track which mode to restore to after un-minimizing
+  const [lastMode,        setLastMode]        = useState('fab');   // 'fab' | 'popout'
+  const [confirmNewChat,  setConfirmNewChat]  = useState(false);
+  const [modeMenuOpen,    setModeMenuOpen]    = useState(false);
   const modeMenuRef = useRef(null);
+  const dragRef     = useRef({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
 
-  // Close mode menu when clicking outside
+  // Close mode menu on outside click
   useEffect(() => {
     if (!modeMenuOpen) return;
     function handleClick(e) {
@@ -68,39 +77,84 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
     [submitFromRenderer, submitSilent, appendBubble, prefillInput],
   );
 
-  // Position modifier classes
-  const posClass = position === 'top' ? 'ce-panel--top' : 'ce-panel--bottom';
-  const alignClass = align === 'left' ? 'ce-panel--left' : 'ce-panel--right';
-  const fabAlignClass = align === 'left' ? 'ce-fab--left' : 'ce-fab--right';
-  const fabPosClass = position === 'top' ? 'ce-fab--top' : 'ce-fab--bottom';
+  // ── CSS position classes ──────────────────────────────────────────────────
+  const posClass      = position === 'top'  ? 'ce-panel--top'    : 'ce-panel--bottom';
+  const alignClass    = align    === 'left' ? 'ce-panel--left'   : 'ce-panel--right';
+  const fabAlignClass = align    === 'left' ? 'ce-fab--left'     : 'ce-fab--right';
+  const fabPosClass   = position === 'top'  ? 'ce-fab--top'      : 'ce-fab--bottom';
 
   const panelStateClass = isOpen
     ? isMinimized
       ? 'ce-panel--minimized'
-      : isMaximized
-        ? 'ce-panel--open ce-panel--maximized'
+      : isPopout
+        ? 'ce-panel--open ce-panel--popout'
         : 'ce-panel--open'
     : 'ce-panel--closed';
 
+  // Popout overrides corner anchor with absolute drag position
+  const popoutStyle = (isPopout && !isMinimized && popoutPos.x !== null)
+    ? { position: 'fixed', left: popoutPos.x, top: popoutPos.y, right: 'auto', bottom: 'auto', transform: 'none' }
+    : {};
+
+  // ── Drag-to-move in popout mode (via header brand area) ──────────────────
+  const onTitleDragStart = (e) => {
+    if (!isPopout || isMinimized) return;
+    e.preventDefault();
+    const panel = e.currentTarget.closest('.ce-panel');
+    const rect  = panel?.getBoundingClientRect?.();
+    dragRef.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX:  popoutPos.x ?? rect?.left ?? 200,
+      origY:  popoutPos.y ?? rect?.top  ?? 100,
+    };
+    function onMove(ev) {
+      if (!dragRef.current.active) return;
+      setPopoutPos({
+        x: dragRef.current.origX + ev.clientX - dragRef.current.startX,
+        y: dragRef.current.origY + ev.clientY - dragRef.current.startY,
+      });
+    }
+    function onUp() {
+      dragRef.current.active = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onUp);
+  };
+
+  // ── New chat with confirmation if messages exist ──────────────────────────
+  const handleNewChat = () => {
+    if (messages.length > 0) setConfirmNewChat(true);
+    else resetChat();
+  };
+
+  // ── Mode picker options ───────────────────────────────────────────────────
   const modeOptions = [
-    { id: 'sidepanel-left',  label: 'Show in Left Panel',  Icon: PanelLeftIcon },
-    { id: 'sidepanel-right', label: 'Show in Right Panel', Icon: PanelRightIcon },
+    { id: 'sidepanel-left',  label: 'Left Side',  Icon: PanelLeftIcon  },
+    { id: 'sidepanel-right', label: 'Right Side', Icon: PanelRightIcon },
   ];
 
+  // ── Header action buttons ─────────────────────────────────────────────────
   const headerActions = (
     <>
       {/* New Chat */}
-      <button
-        type="button"
-        className="ce-header-btn"
-        title="New chat"
-        aria-label="Start new chat"
-        onClick={resetChat}
-      >
-        <NewChatIcon />
-      </button>
+      {config.showNewChat && (
+        <button
+          type="button"
+          className="ce-header-btn"
+          title="New chat"
+          aria-label="Start new chat"
+          onClick={handleNewChat}
+        >
+          <NewChatIcon />
+        </button>
+      )}
+
       {/* Mode picker */}
-      {onModeChange && (
+      {config.showLayoutPicker && onModeChange && (
         <div ref={modeMenuRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -120,10 +174,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
                   key={opt.id}
                   role="menuitem"
                   className="ce-mode-menu-item"
-                  onClick={() => {
-                    setModeMenuOpen(false);
-                    onModeChange(opt.id);
-                  }}
+                  onClick={() => { setModeMenuOpen(false); onModeChange(opt.id); }}
                 >
                   <opt.Icon style={{ width: 15, height: 15, marginRight: 6 }} />
                   {opt.label}
@@ -133,30 +184,59 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
           )}
         </div>
       )}
-      <button
-        type="button"
-        className="ce-header-btn"
-        title={isMaximized ? 'Restore size' : 'Maximize'}
-        aria-label={isMaximized ? 'Restore chat size' : 'Maximize chat'}
-        onClick={() => { setIsMaximized((v) => !v); setIsMinimized(false); }}
-      >
-        {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-      </button>
-      <button
-        type="button"
-        className="ce-header-btn"
-        title={isMinimized ? 'Restore' : 'Minimize'}
-        aria-label={isMinimized ? 'Restore chat' : 'Minimize chat'}
-        onClick={() => { setIsMinimized((v) => !v); setIsMaximized(false); }}
-      >
-        <MinimizeIcon />
-      </button>
+
+      {/* Maximize / Restore — pops panel to center, draggable */}
+      {config.showMaximize && (
+        <button
+          type="button"
+          className={`ce-header-btn ${isPopout ? 'ce-header-btn--active' : ''}`}
+          title={isPopout ? 'Restore to corner' : 'Expand to centre'}
+          aria-label={isPopout ? 'Restore panel to corner' : 'Expand panel to centre'}
+          onClick={() => {
+            const next = !isPopout;
+            if (next && popoutPos.x === null) {
+              setPopoutPos({
+                x: Math.round((window.innerWidth  - 500) / 2),
+                y: Math.round((window.innerHeight - 640) / 2),
+              });
+            }
+            setIsPopout(next);
+            setLastMode(next ? 'popout' : 'fab');
+            setIsMinimized(false);
+          }}
+        >
+          {isPopout ? <RestoreIcon /> : <MaximizeIcon />}
+        </button>
+      )}
+
+      {/* Minimize / Restore — icon changes based on state */}
+      {config.showMinimize && (
+        <button
+          type="button"
+          className="ce-header-btn"
+          title={isMinimized ? 'Restore' : 'Minimize'}
+          aria-label={isMinimized ? 'Restore chat' : 'Minimize chat'}
+          onClick={() => {
+            if (isMinimized) {
+              setIsMinimized(false);
+              setIsPopout(lastMode === 'popout');
+            } else {
+              setLastMode(isPopout ? 'popout' : 'fab');
+              setIsMinimized(true);
+              setIsPopout(false);
+            }
+          }}
+        >
+          {isMinimized ? <RestoreFromMinIcon /> : <MinimizeIcon />}
+        </button>
+      )}
+
       <button
         type="button"
         className="ce-header-btn ce-header-btn--close"
         title="Close chat"
         aria-label="Close chat"
-        onClick={() => { setIsOpen(false); setIsMinimized(false); setIsMaximized(false); }}
+        onClick={() => { setIsOpen(false); setIsMinimized(false); setIsPopout(false); }}
       >
         <CloseIcon />
       </button>
@@ -166,22 +246,39 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
   return (
     <ChatActionsContext.Provider value={chatActions}>
     <>
-      {/* ── Floating chat panel ──────────────────────────────────── */}
+      {/* ── Floating chat panel ───────────────────────────────────────────── */}
       <div
         className={`ce-panel ${posClass} ${alignClass} ${panelStateClass}`}
+        style={popoutStyle}
         role="dialog"
         aria-modal="false"
         aria-label="Chat panel"
         aria-hidden={!isOpen}
       >
+        {/* ── Confirm new-chat dialog — overlays only the panel */}
+        {confirmNewChat && (
+          <div
+            className="ce-confirm-overlay"
+            style={{ position: 'absolute', inset: 0, zIndex: 10 }}
+          >
+            <div className="ce-confirm-dialog">
+              <p className="ce-confirm-msg">Start a new chat? Your current conversation will be cleared.</p>
+              <div className="ce-confirm-btns">
+                <button className="ce-confirm-cancel" onClick={() => setConfirmNewChat(false)}>Cancel</button>
+                <button className="ce-confirm-ok" onClick={() => { resetChat(); setConfirmNewChat(false); }}>New Chat</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <ChatHeader
           title={config.title}
           showDarkModeLightMode={config.showDarkModeLightMode}
-          showAudit={config.showAudit}
+          showAudit={false}
+          showHeaderDot={config.showHeaderDot}
           isDark={isDark}
-          auditOpen={auditOpen}
           onToggleTheme={toggleTheme}
-          onToggleAudit={() => setAuditOpen((v) => !v)}
+          onDragStart={onTitleDragStart}
           actions={headerActions}
         />
 
@@ -200,12 +297,12 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
             progressText={progressText}
             onFeedback={submitFeedback}
             auditRevision={auditRevision}
-            auditOpen={auditOpen}
+            auditOpen={false}
           />
         )}
-      </div>
+      </div>  {/* end ce-panel */}
 
-      {/* ── FAB launcher button ────────────────────────────────────────── */}
+      {/* ── FAB launcher button ───────────────────────────────────────────── */}
       <button
         type="button"
         className={`ce-fab ${fabPosClass} ${fabAlignClass} ${isOpen ? 'ce-fab--active' : ''}`}
@@ -217,7 +314,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
           if (isOpen) {
             setIsOpen(false);
             setIsMinimized(false);
-            setIsMaximized(false);
+            setIsPopout(false);
           } else {
             setIsOpen(true);
             setIsMinimized(false);

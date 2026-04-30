@@ -52,16 +52,48 @@ export function ChatArea({
   onFeedback,
   auditRevision,
   auditOpen,
+  onCloseAudit,
   engineStatus,
 }) {
   const { config } = useConvEngineChatContext();
   const isFullscreen = variant === 'fullscreen';
 
   if (isInitial) {
+    // Fullscreen: title stays centered, composer always lives in the bottom footer
+    if (isFullscreen) {
+      return (
+        <div className="ce-chat-body">
+          <ChatLanding
+            fullscreen
+            hideComposer
+            title={config.title}
+            subtitle={config.subtitle}
+            showAvatar={config.showLandingAvatar}
+            showSubtitle={config.showLandingSubtitle}
+          />
+          <footer className="ce-footer ce-footer--fullscreen">
+            <ChatComposer
+              fullscreen
+              inputRef={inputRef}
+              input={input}
+              isTyping={isTyping}
+              isMultiLine={isMultiLine}
+              onInputChange={onInputChange}
+              onKeyDown={onKeyDown}
+              onSend={onSend}
+              placeholder={config.placeholder}
+            />
+          </footer>
+        </div>
+      );
+    }
     return (
       <ChatLanding
-        fullscreen={isFullscreen}
+        fullscreen={false}
         title={config.title}
+        subtitle={config.subtitle}
+        showAvatar={config.showLandingAvatar}
+        showSubtitle={config.showLandingSubtitle}
         placeholder={config.placeholder}
         input={input}
         isTyping={isTyping}
@@ -88,7 +120,7 @@ export function ChatArea({
       />
 
       {auditOpen && config.showAudit && (
-        <AuditPanel auditRevision={auditRevision} />
+        <AuditPanel auditRevision={auditRevision} onClose={onCloseAudit} />
       )}
 
       <footer className={`ce-footer ${isFullscreen ? 'ce-footer--fullscreen' : ''}`}>

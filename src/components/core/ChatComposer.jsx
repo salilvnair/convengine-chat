@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { SendIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 
 /**
  * Textarea + send button composition.
@@ -19,6 +19,7 @@ export function ChatComposer({
   centered = false,
   fullscreen = false,
 }) {
+  const { SendIcon } = useIcons();
   // Auto-resize textarea
   useEffect(() => {
     const el = inputRef?.current;

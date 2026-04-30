@@ -1,9 +1,10 @@
-import { ThumbDownIcon, ThumbUpIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 
 /**
  * Thumbs-up / thumbs-down row rendered below each assistant message.
  */
 export function ChatFeedbackRow({ bubble, onFeedback }) {
+  const { ThumbDownIcon, ThumbUpIcon } = useIcons();
   return (
     <div className="ce-feedback-row" role="group" aria-label="Rate this response">
       <button

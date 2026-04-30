@@ -1,9 +1,10 @@
-import { AgentIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 
 /**
  * Animated "Agent is thinking…" indicator shown while awaiting a response.
  */
 export function ChatTypingIndicator({ progressText }) {
+  const { AgentIcon } = useIcons();
   const label =
     typeof progressText === 'string' && progressText.trim()
       ? progressText

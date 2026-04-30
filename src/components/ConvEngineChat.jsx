@@ -84,7 +84,7 @@ export function ConvEngineChat({
   theme = {},
   onModeChange,
 }) {
-  const { isDark, toggleTheme } = useTheme(config.showDarkModeLightMode);
+  const { isDark, toggleTheme } = useTheme(config.showDarkModeLightMode, config.defaultDark ?? false);
 
   const rootClass = [
     'ce-chat-root',
@@ -93,11 +93,30 @@ export function ConvEngineChat({
     .filter(Boolean)
     .join(' ');
 
-  // Merge theme overrides with panel stacking context
-  const rootStyle = {
-    ...(mode === 'panel' ? { position: 'relative', zIndex: 0 } : {}),
-    ...resolveThemeStyle(theme),
-  };
+  // Resolves a color value that may be a plain string or { light, dark } object.
+  // Plain string applies to both themes; object picks the matching variant.
+  function resolveColor(val) {
+    if (!val) return null;
+    if (typeof val === 'string') return val || null;
+    if (typeof val === 'object') {
+      return (isDark ? (val.dark ?? val.light) : (val.light ?? val.dark)) || null;
+    }
+    return null;
+  }
+
+  // Config shorthand color overrides — consumers can pass colors in config
+  // without needing to know CSS variable names. theme prop takes precedence.
+  // Accepts plain string OR { light: '...', dark: '...' } per-theme object.
+  const configColors = {};
+  const cu = resolveColor(config.bubbleUserBg);    if (cu) configColors['bg-bubble-user']    = cu;
+  const ct = resolveColor(config.bubbleUserText);  if (ct) configColors['text-bubble-user']  = ct;
+  const ca = resolveColor(config.bubbleAgentBg);   if (ca) configColors['bg-bubble-agent']   = ca;
+  const cx = resolveColor(config.bubbleAgentText); if (cx) configColors['text-bubble-agent'] = cx;
+  const cp = resolveColor(config.panelBg);         if (cp) configColors['bg-panel']          = cp;
+  const cc = resolveColor(config.composerBg);      if (cc) configColors['bg-composer']       = cc;
+
+  // Merge: theme wins over config colors (explicit CSS var overrides take priority)
+  const rootStyle = resolveThemeStyle({ ...configColors, ...theme }) ?? {};
 
   return (
     <ConvEngineChatProvider config={config}>

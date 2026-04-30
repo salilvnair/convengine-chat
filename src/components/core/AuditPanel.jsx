@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
-import { ChevronDownIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 
 /* ── Stage meta for coloured left-border ─────────────────────────────────── */
 const STAGE_COLORS = {
@@ -36,6 +36,7 @@ function formatPayload(raw) {
 /* ── Single audit entry ───────────────────────────────────────────────────── */
 function AuditEntry({ entry }) {
   const [open, setOpen] = useState(false);
+  const { ChevronDownIcon } = useIcons();
   const payload = formatPayload(entry.payloadJson ?? entry.payload_json ?? entry.payload);
   const stage = entry.stage ?? 'UNKNOWN';
 
@@ -71,11 +72,12 @@ function AuditEntry({ entry }) {
  * Fetches and displays the ConvEngine audit trail for the current conversation.
  * Refreshes automatically whenever `auditRevision` increments (new response).
  */
-export function AuditPanel({ auditRevision }) {
+export function AuditPanel({ auditRevision, onClose }) {
   const { conversationId, apiClient } = useConvEngineChatContext();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -99,11 +101,57 @@ export function AuditPanel({ auditRevision }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditRevision, conversationId]);
 
+  const handleCopy = () => {
+    if (!conversationId) return;
+    navigator.clipboard?.writeText(conversationId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+
   return (
     <aside className="ce-audit-panel" aria-label="Audit trail">
       <div className="ce-audit-panel-header">
-        <span className="ce-audit-panel-title">Audit Trail</span>
-        {loading && <span className="ce-audit-loading">Refreshing…</span>}
+        <span className="ce-audit-panel-title">Audit Timeline</span>
+        {conversationId && (
+          <span className="ce-audit-id-pill" title={conversationId}>{conversationId}</span>
+        )}
+        {loading && <span className="ce-audit-loading">…</span>}
+        <div className="ce-audit-header-actions">
+          {conversationId && (
+            <button
+              type="button"
+              className="ce-audit-copy-btn"
+              title={copied ? 'Copied!' : 'Copy conversation ID'}
+              aria-label="Copy conversation ID"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              )}
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              className="ce-audit-close-btn"
+              title="Close audit panel"
+              aria-label="Close audit panel"
+              onClick={onClose}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="ce-audit-scroll">

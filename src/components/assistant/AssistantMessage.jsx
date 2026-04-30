@@ -1,4 +1,4 @@
-import { AgentIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 import { bubbleShapeClass, isAssistantErrorBubble } from '../../utils/messageBubble.js';
 import { containsMarkdownTable } from '../../utils/assistantContent.js';
 import { resolveAssistantRenderer } from '../../renderers/core/RendererRegistry.jsx';
@@ -16,6 +16,7 @@ import { useChatActions } from '../../context/ChatActionsContext.jsx';
 export function AssistantMessage({ bubble }) {
   const { config } = useConvEngineChatContext();
   const { actions } = useChatActions();
+  const { AgentIcon } = useIcons();
 
   const isError = isAssistantErrorBubble(bubble);
   const resolved = !isError

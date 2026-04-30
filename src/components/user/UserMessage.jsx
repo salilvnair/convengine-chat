@@ -1,10 +1,11 @@
-import { UserIcon } from '../../icons/Icons.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 import { bubbleShapeClass } from '../../utils/messageBubble.js';
 
 /**
  * Renders a single user message bubble (right-aligned).
  */
 export function UserMessage({ bubble }) {
+  const { UserIcon } = useIcons();
   return (
     <article className="ce-message ce-message--user">
       <div className="ce-message-content">

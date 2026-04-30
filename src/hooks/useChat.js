@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useConvEngineChatContext } from '../context/ConvEngineChatContext.jsx';
 import { stringifyPayload, extractEngineStatus } from '../utils/messagePayload.js';
 import { containsMarkdownTable } from '../utils/assistantContent.js';
@@ -9,19 +9,20 @@ import { createClientId } from '../utils/uuid.js';
  * Encapsulates all send / feedback / scroll logic so UI components stay thin.
  */
 export function useChat() {
-  const { conversationId, apiClient, config } = useConvEngineChatContext();
+  const { conversationId, apiClient, config, chatState } = useConvEngineChatContext();
 
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [progressText, setProgressText] = useState('');
+  // All core state lives in context so it survives mode switches (panel ↔ sidepanel etc.)
+  const {
+    messages,      setMessages,
+    input,         setInput,
+    isTyping,      setIsTyping,
+    progressText,  setProgressText,
+    auditRevision, setAuditRevision,
+    threadRef,
+    inputRef,
+  } = chatState;
+
   const [engineStatus, setEngineStatus] = useState(null);
-  // Increment whenever a new assistant response arrives so AuditPanel can
-  // refetch without needing a prop-drill callback.
-  const [auditRevision, setAuditRevision] = useState(0);
-
-  const threadRef = useRef(null);
-  const inputRef = useRef(null);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const isInitial = useMemo(
