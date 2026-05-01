@@ -18,6 +18,7 @@ export function ChatComposer({
   placeholder = 'Ask ConvEngine…',
   centered = false,
   fullscreen = false,
+  shape = 'round',
 }) {
   const { SendIcon } = useIcons();
   // Auto-resize textarea
@@ -37,6 +38,7 @@ export function ChatComposer({
     centered    ? 'ce-composer--centered'    : '',
     isMultiLine ? 'ce-composer--multiline'   : '',
     fullscreen  ? 'ce-composer--fullscreen'  : '',
+    shape === 'rect' ? 'ce-composer--rect' : '',
   ]
     .filter(Boolean)
     .join(' ');

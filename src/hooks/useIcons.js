@@ -18,6 +18,7 @@ import {
   AuditIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon,
   MaximizeIcon, RestoreIcon, LayoutIcon, NewChatIcon,
   PanelLeftIcon, PanelRightIcon, PopoutIcon, RestoreFromMinIcon,
+  LandingAvatarIcon,
 } from '../icons/Icons.jsx';
 import { useConvEngineChatContext } from '../context/ConvEngineChatContext.jsx';
 
@@ -44,6 +45,7 @@ const DEFAULT_ICONS = {
   PanelRightIcon,
   PopoutIcon,
   RestoreFromMinIcon,
+  LandingAvatarIcon,
 };
 
 export function useIcons() {

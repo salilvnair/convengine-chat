@@ -14,14 +14,14 @@ import { ChatArea } from '../core/ChatArea.jsx';
  *   position  "bottom" | "top"    (default: "bottom")
  *   align     "right"  | "left"   (default: "right")
  */
-export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange }) {
+export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false }) {
   const { config } = useConvEngineChatContext();
   const {
     ChatBubbleIcon, CloseIcon, MinimizeIcon,
     MaximizeIcon, RestoreIcon, RestoreFromMinIcon,
     LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
   } = useIcons();
-  const [isOpen,          setIsOpen]          = useState(false);
+  const [isOpen,          setIsOpen]          = useState(initialOpen);
   const [isMinimized,     setIsMinimized]     = useState(false);
   const [isPopout,        setIsPopout]        = useState(false);
   const [popoutPos,       setPopoutPos]       = useState({ x: null, y: null });

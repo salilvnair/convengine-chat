@@ -82,6 +82,7 @@ export function ChatArea({
               onKeyDown={onKeyDown}
               onSend={onSend}
               placeholder={config.placeholder}
+              shape={config.composerShape}
             />
           </footer>
         </div>
@@ -102,6 +103,7 @@ export function ChatArea({
         onInputChange={onInputChange}
         onKeyDown={onKeyDown}
         onSend={onSend}
+        shape={config.composerShape}
       />
     );
   }
@@ -134,6 +136,7 @@ export function ChatArea({
           onSend={onSend}
           placeholder={config.placeholder}
           fullscreen={isFullscreen}
+          shape={config.composerShape}
         />
       </footer>
     </div>

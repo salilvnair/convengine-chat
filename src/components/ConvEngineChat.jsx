@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { ConvEngineChatProvider } from '../context/ConvEngineChatContext.jsx';
 import { PanelMode } from './core/PanelMode.jsx';
 import { FullscreenMode } from './core/FullscreenMode.jsx';
@@ -86,6 +87,18 @@ export function ConvEngineChat({
 }) {
   const { isDark, toggleTheme } = useTheme(config.showDarkModeLightMode, config.defaultDark ?? false);
 
+  // When the user switches mode from inside the widget (via the mode picker),
+  // the newly-mounted mode component should start open. We set mountOpen=true
+  // before calling the consumer's onModeChange, then reset it after the new
+  // component has mounted (useEffect runs after the child's useState(initialOpen)).
+  const [mountOpen, setMountOpen] = useState(false);
+  useEffect(() => { setMountOpen(false); }, [mode]);
+
+  function handleModeChange(newMode) {
+    setMountOpen(true);
+    onModeChange?.(newMode);
+  }
+
   const rootClass = [
     'ce-chat-root',
     mode === 'fullscreen' ? 'ce-chat-root--fullscreen' : '',
@@ -114,6 +127,7 @@ export function ConvEngineChat({
   const cx = resolveColor(config.bubbleAgentText); if (cx) configColors['text-bubble-agent'] = cx;
   const cp = resolveColor(config.panelBg);         if (cp) configColors['bg-panel']          = cp;
   const cc = resolveColor(config.composerBg);      if (cc) configColors['bg-composer']       = cc;
+  const ci = resolveColor(config.iconColor);       if (ci) configColors['icon-color']         = ci;
 
   // Merge: theme wins over config colors (explicit CSS var overrides take priority)
   const rootStyle = resolveThemeStyle({ ...configColors, ...theme }) ?? {};
@@ -132,7 +146,8 @@ export function ConvEngineChat({
             align={align}
             isDark={isDark}
             toggleTheme={toggleTheme}
-            onModeChange={onModeChange}
+            onModeChange={handleModeChange}
+            initialOpen={mountOpen}
           />
         ) : (
           <PanelMode
@@ -140,7 +155,8 @@ export function ConvEngineChat({
             align={align}
             isDark={isDark}
             toggleTheme={toggleTheme}
-            onModeChange={onModeChange}
+            onModeChange={handleModeChange}
+            initialOpen={mountOpen}
           />
         )}
       </div>

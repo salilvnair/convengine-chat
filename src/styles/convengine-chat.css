@@ -20,6 +20,10 @@
   /* accent-light auto-derives from accent */
   --ce-color-accent-light:   color-mix(in srgb, var(--ce-color-accent) 14%, transparent);
 
+  /* Icon resting color — the non-hovered state of header buttons / icons.
+     On hover they shift to --ce-color-accent. Override to tint your own brand. */
+  --ce-icon-color:           #64748b;  /* slate-500 */
+
   /* Backgrounds */
   --ce-bg-panel:             #ffffff;
   --ce-bg-header:            #f8f9ff;
@@ -84,6 +88,8 @@
   --ce-text-secondary:       #9ca3af;
   --ce-text-bubble-agent:    #f2f6fa;
   --ce-text-placeholder:     #6b7280;
+
+  --ce-icon-color:           #9ca3af;  /* gray-400 — softer on dark bg */
 
   --ce-border-color:         #3a3a3a;
   --ce-shadow-panel:         0 4px 32px rgba(0,0,0,0.5);
@@ -347,7 +353,10 @@
 }
 
 .ce-chat-root .ce-landing--fullscreen .ce-landing-avatar {
-  display: none;
+  display: flex;
+  margin-bottom: 16px;
+  width: 72px;
+  height: 72px;
 }
 
 .ce-chat-root .ce-landing--fullscreen .ce-landing-title {
@@ -361,7 +370,11 @@
 }
 
 .ce-chat-root .ce-landing--fullscreen .ce-landing-subtitle {
-  display: none; /* subtitle is panel-only; fullscreen shows just the title */
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(13px, 1.4vw, 16px);
+  color: var(--ce-text-secondary);
+  text-align: center;
 }
 
 /* Composer in the fullscreen landing — parent flex centers it, no extra margin needed */
@@ -419,6 +432,7 @@
 .ce-chat-root .ce-panel--minimized {
   opacity: 1;
   pointer-events: all;
+  min-height: 0;           /* override the panel's min-height so max-height wins */
   max-height: 56px;        /* just the header */
   transform: translateY(0) scale(1);
 }
@@ -520,7 +534,7 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: var(--ce-text-secondary);
+  color: var(--ce-icon-color);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1728,4 +1742,36 @@
 
 .ce-chat-root .ce-confirm-ok:hover {
   background: var(--ce-color-accent-hover);
+}
+
+/* ── Rectangular composer (config.composerShape = 'rect') ───────────────── */
+.ce-chat-root .ce-composer.ce-composer--rect,
+.ce-chat-root .ce-composer.ce-composer--rect.ce-composer--multiline {
+  border-radius: 10px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PANEL / POPUP / SIDEPANEL — compact header & rectangular composer
+   Fullscreen is intentionally excluded from all overrides below.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Smaller header title font ────────────────────────────────────────── */
+.ce-chat-root .ce-panel .ce-header-title,
+.ce-chat-root .ce-sidepanel .ce-header-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Smaller header button icons ─────────────────────────────────────── */
+.ce-chat-root .ce-panel .ce-header-btn svg,
+.ce-chat-root .ce-sidepanel .ce-header-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Smaller generic icons inside panel / sidepanel ─────────────────── */
+.ce-chat-root .ce-panel .ce-icon,
+.ce-chat-root .ce-sidepanel .ce-icon {
+  width: 15px;
+  height: 15px;
 }

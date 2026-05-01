@@ -1,6 +1,6 @@
 {
-  "name": "convengine-chat",
-  "version": "0.1.0",
+  "name": "@salilvnair/convengine-chat",
+  "version": "1.0.0",
   "description": "React chat component library for the ConvEngine conversational AI framework",
   "type": "module",
   "main": "./dist/convengine-chat.umd.cjs",
@@ -14,7 +14,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": [
     "**/*.css"

@@ -13,12 +13,12 @@ import { ChatArea } from '../core/ChatArea.jsx';
  * Props:
  *   align  "right" | "left"  (default: "right")
  */
-export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange }) {
+export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false }) {
   const { config } = useConvEngineChatContext();
   const {
     AuditIcon, ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
   } = useIcons();
-  const [isOpen,         setIsOpen]         = useState(false);
+  const [isOpen,         setIsOpen]         = useState(initialOpen);
   const [auditOpen,      setAuditOpen]      = useState(false);
   const [confirmNewChat, setConfirmNewChat] = useState(false);
   const [modeMenuOpen,   setModeMenuOpen]   = useState(false);
@@ -74,11 +74,12 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     else resetChat();
   };
 
+  const currentModeId = align === 'left' ? 'sidepanel-left' : 'sidepanel-right';
   const modeOptions = [
-    { id: 'panel',           label: 'Panel (FAB)',         Icon: LayoutIcon     },
-    { id: 'sidepanel-left',  label: 'Left Side',  Icon: PanelLeftIcon  },
-    { id: 'sidepanel-right', label: 'Right Side', Icon: PanelRightIcon },
-  ];
+    { id: 'panel',           label: 'Panel (FAB)', Icon: LayoutIcon     },
+    { id: 'sidepanel-left',  label: 'Left Side',   Icon: PanelLeftIcon  },
+    { id: 'sidepanel-right', label: 'Right Side',  Icon: PanelRightIcon },
+  ].filter((opt) => opt.id !== currentModeId);
 
   const headerActions = (
     <>

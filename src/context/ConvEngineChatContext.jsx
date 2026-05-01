@@ -58,6 +58,8 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       bubbleAgentText: config.bubbleAgentText ?? null,
       panelBg:         config.panelBg         ?? null,
       composerBg:      config.composerBg      ?? null,
+      iconColor:       config.iconColor       ?? null,
+      composerShape:   config.composerShape   ?? 'round',
     }),
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.

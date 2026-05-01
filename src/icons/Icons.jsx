@@ -190,8 +190,8 @@ export function AuditIcon(props) {
       aria-hidden="true"
       {...props}
     >
-      <circle cx="4" cy="6"  r="1" fill="currentColor" stroke="none" />
-      <line x1="8" y1="6"  x2="20" y2="6" />
+      <circle cx="4" cy="6" r="1" fill="currentColor" stroke="none" />
+      <line x1="8" y1="6" x2="20" y2="6" />
       <circle cx="4" cy="12" r="1" fill="currentColor" stroke="none" />
       <line x1="8" y1="12" x2="20" y2="12" />
       <circle cx="4" cy="18" r="1" fill="currentColor" stroke="none" />
@@ -328,6 +328,42 @@ export function RestoreFromMinIcon(props) {
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
       <path d="M5 15l7-6 7 6" />
       <line x1="4" y1="20" x2="20" y2="20" />
+    </svg>
+  );
+}
+
+/** Landing avatar / bot icon — decorative robot shown on the landing screen */
+export function LandingAvatarIcon(props) {
+  return (
+    <svg viewBox="0 0 40 40"
+     fill="none"
+     xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20"
+              cy="20"
+              r="20"
+              fill="currentColor"
+              opacity="0.12">
+      </circle>
+      <path d="M12 14a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2v-6z"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round">
+      </path>
+      <path d="M20 10v2M17 22v5M23 22v5M13 26l4-2M23 24l4 2M17 28h6"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round">
+      </path>
+      <circle cx="17"
+              cy="17"
+              r="1"
+              fill="currentColor">
+      </circle>
+      <circle cx="23"
+              cy="17"
+              r="1"
+              fill="currentColor">
+      </circle>
     </svg>
   );
 }

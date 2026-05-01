@@ -1,4 +1,5 @@
 import { ChatComposer } from './ChatComposer.jsx';
+import { useIcons } from '../../hooks/useIcons.js';
 
 /**
  * Initial landing screen shown before the first message is sent.
@@ -17,29 +18,19 @@ export function ChatLanding({
   onInputChange,
   onKeyDown,
   onSend,
-  placeholder,
+  placeholder, shape,
 }) {
+  const { LandingAvatarIcon } = useIcons();
   return (
     <div className={`ce-landing ${fullscreen ? 'ce-landing--fullscreen' : ''}`}>
       <div className="ce-landing-hero">
-        {showAvatar && !fullscreen && (
+        {showAvatar && (
           <div className="ce-landing-avatar" aria-hidden="true">
-            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="20" fill="currentColor" opacity="0.12" />
-              <path
-                d="M12 14a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2v-6z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-              <path d="M20 10v2M17 22v5M23 22v5M13 26l4-2M23 24l4 2M17 28h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <circle cx="17" cy="17" r="1" fill="currentColor" />
-              <circle cx="23" cy="17" r="1" fill="currentColor" />
-            </svg>
+            <LandingAvatarIcon style={{ width: '100%', height: '100%' }} />
           </div>
         )}
         <h2 className="ce-landing-title">{title}</h2>
-        {showSubtitle && !fullscreen && (
+        {showSubtitle && (
           <p className="ce-landing-subtitle">{subtitle}</p>
         )}
       </div>
@@ -56,6 +47,7 @@ export function ChatLanding({
           onKeyDown={onKeyDown}
           onSend={onSend}
           placeholder={placeholder}
+          shape={shape}
         />
       )}
     </div>
