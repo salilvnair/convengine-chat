@@ -54,6 +54,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     resetChat,
     handleKeyDown,
     submitFeedback,
+    engineStatus,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -214,6 +215,8 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
           />
 
           <ChatArea
+            variant="sidepanel"
+            engineStatus={engineStatus}
             isInitial={isInitial}
             input={input}
             isTyping={isTyping}

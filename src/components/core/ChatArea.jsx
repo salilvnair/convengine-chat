@@ -57,6 +57,8 @@ export function ChatArea({
 }) {
   const { config } = useConvEngineChatContext();
   const isFullscreen = variant === 'fullscreen';
+  const isSidepanel  = variant === 'sidepanel';
+  const showStatusBar = (isFullscreen || isSidepanel) && config.showEngineStatus !== false;
 
   if (isInitial) {
     // Fullscreen: title stays centered, composer always lives in the bottom footer
@@ -110,7 +112,7 @@ export function ChatArea({
 
   return (
     <div className={`ce-chat-body ${auditOpen && config.showAudit ? 'ce-chat-body--with-audit' : ''}`}>
-      {isFullscreen && config.showEngineStatus !== false && <EngineStatusBar engineStatus={engineStatus} />}
+      {showStatusBar && <EngineStatusBar engineStatus={engineStatus} />}
 
       <ChatThread
         threadRef={threadRef}

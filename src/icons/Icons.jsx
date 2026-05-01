@@ -346,13 +346,13 @@ export function LandingAvatarIcon(props) {
       </circle>
       <path d="M12 14a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2v-6z"
             stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round">
+            strokeWidth="1.8"
+            strokeLinecap="round">
       </path>
       <path d="M20 10v2M17 22v5M23 22v5M13 26l4-2M23 24l4 2M17 28h6"
             stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round">
+            strokeWidth="1.8"
+            strokeLinecap="round">
       </path>
       <circle cx="17"
               cy="17"
