@@ -63,6 +63,7 @@ export function resolveAssistantRenderer(rawText, extraProviders = []) {
         key: renderer.key ?? 'custom',
         Component: renderer.Component,
         payload,
+        hideBubble: renderer.hideBubble === true,
       };
     }
   }

@@ -110,7 +110,7 @@ export function ChatArea({
 
   return (
     <div className={`ce-chat-body ${auditOpen && config.showAudit ? 'ce-chat-body--with-audit' : ''}`}>
-      {isFullscreen && <EngineStatusBar engineStatus={engineStatus} />}
+      {isFullscreen && config.showEngineStatus !== false && <EngineStatusBar engineStatus={engineStatus} />}
 
       <ChatThread
         threadRef={threadRef}

@@ -13,7 +13,7 @@ import { ChatArea } from '../core/ChatArea.jsx';
  * Props:
  *   align  "right" | "left"  (default: "right")
  */
-export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false }) {
+export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null }) {
   const { config } = useConvEngineChatContext();
   const {
     AuditIcon, ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
@@ -55,6 +55,13 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     handleKeyDown,
     submitFeedback,
   } = useChat();
+
+  // Expose chat actions to external consumers via actionsRef
+  useEffect(() => {
+    if (!actionsRef) return;
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, reset: resetChat };
+    return () => { if (actionsRef) actionsRef.current = null; };
+  });
 
   const chatActions = useMemo(
     () => ({

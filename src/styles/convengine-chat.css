@@ -260,6 +260,8 @@
 }
 
 .ce-chat-root .ce-thread--fullscreen .ce-feedback-row {
+  width: 100%;
+  box-sizing: border-box;
   max-width: 920px;
   margin: -16px auto 18px;
   padding: 0 18px 0 70px; /* 18px side + 40px avatar + 12px gap */
@@ -1105,6 +1107,66 @@
 
 .ce-chat-root .ce-table-tr:last-child .ce-table-td {
   border-bottom: none;
+}
+
+/* ── hideBubble: raw content area (renderer owns its own shell) ─────────── */
+.ce-chat-root .ce-message-content--raw {
+  max-width: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── DataTable card — standalone card used with hideBubble:true ─────────── */
+.ce-chat-root .ce-data-table-card {
+  background: var(--ce-bg-panel);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07);
+  width: 100%;
+}
+
+.ce-chat-root .ce-data-table-header {
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid var(--ce-border-color);
+  background: var(--ce-bg-header);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ce-chat-root .ce-data-table-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ce-text-primary);
+}
+
+.ce-chat-root .ce-data-table-count {
+  font-size: 11px;
+  color: var(--ce-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Inside the card the ce-table-wrap blends — card border already wraps it */
+.ce-chat-root .ce-data-table-card .ce-table-wrap {
+  border: none;
+  border-radius: 0;
+  margin: 0;
+}
+
+.ce-chat-root .ce-data-table-card .ce-table-tr:hover {
+  background: rgba(99, 102, 241, 0.05);
+  transition: background 0.12s;
+}
+
+.ce-chat-root .ce-data-table-caption {
+  padding: 6px 14px;
+  font-size: 11px;
+  color: var(--ce-text-secondary);
+  border-top: 1px solid var(--ce-border-color);
+  background: var(--ce-bg-header);
+  font-style: italic;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

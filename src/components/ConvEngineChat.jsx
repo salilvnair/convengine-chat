@@ -84,6 +84,7 @@ export function ConvEngineChat({
   config = {},
   theme = {},
   onModeChange,
+  actionsRef = null,
 }) {
   const { isDark, toggleTheme } = useTheme(config.showDarkModeLightMode, config.defaultDark ?? false);
 
@@ -140,7 +141,7 @@ export function ConvEngineChat({
         style={Object.keys(rootStyle).length ? rootStyle : undefined}
       >
         {mode === 'fullscreen' ? (
-          <FullscreenMode isDark={isDark} toggleTheme={toggleTheme} />
+          <FullscreenMode isDark={isDark} toggleTheme={toggleTheme} actionsRef={actionsRef} />
         ) : mode === 'sidepanel' ? (
           <SidepanelMode
             align={align}
@@ -148,6 +149,7 @@ export function ConvEngineChat({
             toggleTheme={toggleTheme}
             onModeChange={handleModeChange}
             initialOpen={mountOpen}
+            actionsRef={actionsRef}
           />
         ) : (
           <PanelMode
@@ -157,6 +159,7 @@ export function ConvEngineChat({
             toggleTheme={toggleTheme}
             onModeChange={handleModeChange}
             initialOpen={mountOpen}
+            actionsRef={actionsRef}
           />
         )}
       </div>

@@ -8,13 +8,13 @@ export function UserMessage({ bubble }) {
   const { UserIcon } = useIcons();
   return (
     <article className="ce-message ce-message--user">
+      <div className="ce-avatar ce-avatar--user" aria-hidden="true">
+        <UserIcon />
+      </div>
       <div className="ce-message-content">
         <div className={`ce-bubble ce-bubble--user ${bubbleShapeClass(bubble.text)}`}>
           <pre className="ce-bubble-text">{bubble.text}</pre>
         </div>
-      </div>
-      <div className="ce-avatar ce-avatar--user" aria-hidden="true">
-        <UserIcon />
       </div>
     </article>
   );

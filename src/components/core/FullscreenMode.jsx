@@ -15,7 +15,7 @@ const MAX_AUDIT_RATIO     = 0.55;
  * Header bar at top with new-chat + audit toggle + optional dark-mode toggle.
  * Audit panel slides in from the right with a draggable divider.
  */
-export function FullscreenMode({ isDark, toggleTheme }) {
+export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
   const { config } = useConvEngineChatContext();
   const { AuditIcon, SunIcon, MoonIcon, NewChatIcon } = useIcons();
   const [auditOpen,      setAuditOpen]      = useState(false);
@@ -75,6 +75,13 @@ export function FullscreenMode({ isDark, toggleTheme }) {
     handleKeyDown,
     submitFeedback,
   } = useChat();
+
+  // Expose chat actions to external consumers via actionsRef
+  useEffect(() => {
+    if (!actionsRef) return;
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, reset: resetChat };
+    return () => { if (actionsRef) actionsRef.current = null; };
+  });
 
   const chatActions = useMemo(
     () => ({

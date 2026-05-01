@@ -28,6 +28,10 @@ export function AssistantMessage({ bubble }) {
     resolved?.key === 'default' &&
     containsMarkdownTable(bubble.text);
 
+  // When a provider declares hideBubble:true the bubble shell is skipped;
+  // the renderer component controls its own presentation entirely.
+  const hideBubble = !isError && resolved?.hideBubble === true;
+
   const Renderer = resolved?.Component;
 
   return (
@@ -36,7 +40,7 @@ export function AssistantMessage({ bubble }) {
         'ce-message',
         'ce-message--assistant',
         isError ? 'ce-message--error' : '',
-        hasTable ? 'ce-message--wide' : '',
+        (hasTable || hideBubble) ? 'ce-message--wide' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -59,35 +63,46 @@ export function AssistantMessage({ bubble }) {
         )}
       </div>
 
-      <div className="ce-message-content">
-        <div
-          className={[
-            'ce-bubble',
-            'ce-bubble--agent',
-            bubbleShapeClass(bubble.text),
-            isError ? 'ce-bubble--error' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {!isError ? (
-            // Pass the full `actions` object as the primary prop.
-            // `onSubmit` kept as a convenience alias for simple renderers.
-            <Renderer
-              payload={resolved.payload}
-              actions={actions}
-              onSubmit={actions.submit}
-            />
-          ) : (
-            <pre className="ce-bubble-text ce-bubble-text--error">
-              <span className="ce-error-prefix" aria-hidden="true">
-                ⚠
-              </span>{' '}
-              {bubble.text}
-            </pre>
-          )}
+      {hideBubble ? (
+        // No bubble shell — the renderer component controls its own presentation.
+        <div className="ce-message-content ce-message-content--raw">
+          <Renderer
+            payload={resolved.payload}
+            actions={actions}
+            onSubmit={actions.submit}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="ce-message-content">
+          <div
+            className={[
+              'ce-bubble',
+              'ce-bubble--agent',
+              bubbleShapeClass(bubble.text),
+              isError ? 'ce-bubble--error' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {!isError ? (
+              // Pass the full `actions` object as the primary prop.
+              // `onSubmit` kept as a convenience alias for simple renderers.
+              <Renderer
+                payload={resolved.payload}
+                actions={actions}
+                onSubmit={actions.submit}
+              />
+            ) : (
+              <pre className="ce-bubble-text ce-bubble-text--error">
+                <span className="ce-error-prefix" aria-hidden="true">
+                  ⚠
+                </span>{' '}
+                {bubble.text}
+              </pre>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

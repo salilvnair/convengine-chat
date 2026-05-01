@@ -45,6 +45,7 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       showLayoutPicker:      config.showLayoutPicker      ?? true,
       showMaximize:          config.showMaximize          ?? true,
       showMinimize:          config.showMinimize          ?? true,
+      showEngineStatus:      config.showEngineStatus      ?? true,
       // ── Renderers & callbacks ──────────────────────────────────────────
       rendererProviders: Array.isArray(config.renderers) ? config.renderers : [],
       onMessage:  config.onMessage  ?? null,

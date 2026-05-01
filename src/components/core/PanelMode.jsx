@@ -14,7 +14,7 @@ import { ChatArea } from '../core/ChatArea.jsx';
  *   position  "bottom" | "top"    (default: "bottom")
  *   align     "right"  | "left"   (default: "right")
  */
-export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false }) {
+export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null }) {
   const { config } = useConvEngineChatContext();
   const {
     ChatBubbleIcon, CloseIcon, MinimizeIcon,
@@ -64,6 +64,13 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
     handleKeyDown,
     submitFeedback,
   } = useChat();
+
+  // Expose chat actions to external consumers via actionsRef
+  useEffect(() => {
+    if (!actionsRef) return;
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, reset: resetChat };
+    return () => { if (actionsRef) actionsRef.current = null; };
+  });
 
   const chatActions = useMemo(
     () => ({
