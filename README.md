@@ -15,6 +15,7 @@
 - [Modes](#modes)
 - [Component Props](#component-props)
 - [config Object](#config-object)
+- [Backend Routes](#backend-routes)
 - [Color Theming](#color-theming)
 - [Theme Tokens](#theme-tokens)
 - [Custom Icons](#custom-icons)
@@ -234,8 +235,9 @@ const myRenderer = {
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `apiHost` | `string` | `"http://localhost:8080"` | Base URL of your ConvEngine backend. Must have CORS enabled for your frontend origin. |
+| `apiHost` | `string` | `""` | Base URL of your backend. Omit (or pass `""`) for same-origin servers. Pass `"http://localhost:8080"` for a separate backend. Must have CORS enabled when cross-origin. |
 | `conversationId` | `string` | `undefined` | Resume an existing conversation by ID. |
+| `apiEndpoints` | `object` | `undefined` | Override individual endpoint paths. See [Backend Routes](#backend-routes). |
 
 ### Text & Labels
 
@@ -288,6 +290,95 @@ See [Color Theming](#color-theming) for full documentation.
 |---|---|---|
 | `onMessage` | `(text: string) => void` | Fired when the user sends a message. |
 | `onResponse` | `(text: string) => void` | Fired when an assistant response arrives. |
+
+---
+
+## Backend Routes
+
+ConvEngine Chat calls three endpoints. The table below shows the **default paths** used when you don't pass `apiEndpoints`:
+
+| Endpoint | Method | Default path | Purpose |
+|---|---|---|---|
+| message | `POST` | `/api/v1/conversation/message` | Send a user message, receive assistant response |
+| feedback | `POST` | `/api/v1/conversation/feedback` | Submit 👍 / 👎 feedback on a message |
+| audit | `GET` | `/api/v1/conversation/audit/:conversationId` | Fetch the full conversation audit trail |
+
+### Request bodies
+
+**`POST /api/v1/conversation/message`**
+```json
+{
+  "conversationId": "abc-123",
+  "message": "I want to know about the pro plan",
+  "reset": false,
+  "inputParams": {}
+}
+```
+
+**`POST /api/v1/conversation/feedback`**
+```json
+{
+  "conversationId": "abc-123",
+  "feedbackType": "thumbsUp",
+  "messageId": "msg-456",
+  "assistantResponse": "...",
+  "metadata": { "role": "assistant", "hasMarkdownTable": false }
+}
+```
+
+### Same-origin server (Express / Hapi / Fastify)
+
+When the chat widget and your API are served from the **same origin**, omit `apiHost` entirely:
+
+```js
+// Express — default paths
+app.post('/api/v1/conversation/message',  messageHandler);
+app.post('/api/v1/conversation/feedback', feedbackHandler);
+app.get( '/api/v1/conversation/audit/:conversationId', auditHandler);
+```
+
+```jsx
+// No apiHost needed — defaults to same origin
+<ConvEngineChat config={{}} />
+```
+
+### Customise route paths with `apiEndpoints`
+
+If your server uses different paths, override them individually. You only need to specify the ones that differ — unspecified endpoints keep their defaults.
+
+```js
+// Express — custom paths
+app.post('/api/v1/message',  messageHandler);
+app.post('/api/v1/feedback', feedbackHandler);
+app.get( '/api/v1/audit/:conversationId', auditHandler);
+```
+
+```jsx
+<ConvEngineChat
+  config={{
+    apiEndpoints: {
+      message:  '/api/v1/message',
+      feedback: '/api/v1/feedback',
+      audit:    '/api/v1/audit',    // /:conversationId appended automatically
+    },
+  }}
+/>
+```
+
+### Cross-origin backend with custom paths
+
+```jsx
+<ConvEngineChat
+  config={{
+    apiHost: 'http://localhost:8080',
+    apiEndpoints: {
+      message: 'http://localhost:8080/api/v1/message',
+    },
+  }}
+/>
+```
+
+> When an `apiEndpoints` value starts with `http` it is used as-is (full URL). When it starts with `/` it is treated as a path on the same origin regardless of `apiHost`.
 
 ---
 

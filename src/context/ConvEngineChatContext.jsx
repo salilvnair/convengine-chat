@@ -23,12 +23,19 @@ export function ConvEngineChatProvider({ config = {}, children }) {
   );
 
   const apiClient = useMemo(
-    () => createApiClient(config.apiHost ?? ''),
-    [config.apiHost],
+    () => createApiClient(config.apiHost ?? '', config.apiEndpoints ?? {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config.apiHost, JSON.stringify(config.apiEndpoints)],
   );
 
   const resolvedConfig = useMemo(
     () => ({
+      // ── API ─────────────────────────────────��─────────────────────────────
+      // apiEndpoints lets consumers override individual endpoint paths/URLs.
+      // Each key overrides one route; omitted keys fall back to the default
+      // {apiHost}/api/v1/conversation/{message|feedback|audit} paths.
+      // Example: { message: '/api/v1/message', feedback: '/api/v1/feedback' }
+      apiEndpoints: config.apiEndpoints ?? null,
       // ── Text content — all consumer-overrideable ────────────────────────
       title:             config.title            ?? 'ConvEngine Assistant',
       subtitle:          config.subtitle         ?? "Ask me anything \u2014 I\u2019ll do my best to help.",
@@ -61,6 +68,15 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       composerBg:      config.composerBg      ?? null,
       iconColor:       config.iconColor       ?? null,
       composerShape:   config.composerShape   ?? 'round',
+      // ── Message enrichment ─────────────────────────────────────────────
+      // messageEnrichment: {
+      //   mode: 'text' | 'json',   // 'text' wraps with prefix/postfix string;
+      //                            // 'json' sends structured inputParams
+      //   prefix:  string,
+      //   postfix: string,
+      //   props:   object,         // json mode only — merged into inputParams
+      // }
+      messageEnrichment: config.messageEnrichment ?? null,
     }),
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.

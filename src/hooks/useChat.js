@@ -5,6 +5,40 @@ import { containsMarkdownTable } from '../utils/assistantContent.js';
 import { createClientId } from '../utils/uuid.js';
 
 /**
+ * Applies messageEnrichment config before the text reaches the API.
+ *
+ * text mode → apiText = prefix + userText + postfix (sent as the message string)
+ * json mode → apiText = userText (unchanged); enrichment fields are merged into
+ *             inputParams so the backend receives { prefix, userText, postfix, ...props, ...rendererParams }
+ *             Renderer-supplied inputParams take precedence over enrichment props on collision.
+ *
+ * The user bubble always shows the original userText — enrichment is invisible in the UI
+ * and only visible to the backend (intent classifier, etc.) and the audit panel.
+ *
+ * @param {string} userText           - The raw text the user typed / renderer display text.
+ * @param {object|null} enrichment    - config.messageEnrichment
+ * @param {object} [existingParams]   - inputParams already supplied by a renderer (merged in json mode)
+ */
+function buildEnrichedPayload(userText, enrichment, existingParams) {
+  if (!enrichment || !enrichment.mode || enrichment.mode === 'none') {
+    return { apiText: userText, inputParams: existingParams };
+  }
+  const { mode, prefix = '', postfix = '', props = {} } = enrichment;
+  if (mode === 'json') {
+    // enrichment props are the base; renderer's own inputParams override on collision
+    const merged = { prefix, userText, postfix, ...props, ...(existingParams ?? {}) };
+    return { apiText: userText, inputParams: merged };
+  }
+  // text mode — trim prefix/postfix and join with a single space so "/faq" + text = "/faq text"
+  const p = prefix.trim();
+  const s = postfix.trim();
+  return {
+    apiText: `${p ? p + ' ' : ''}${userText}${s ? ' ' + s : ''}`,
+    inputParams: existingParams,
+  };
+}
+
+/**
  * Core chat state & actions hook.
  * Encapsulates all send / feedback / scroll logic so UI components stay thin.
  */
@@ -57,7 +91,8 @@ export function useChat() {
     const _t0 = performance.now();
 
     try {
-      const res = await apiClient.sendMessage(conversationId, userText);
+      const { apiText, inputParams } = buildEnrichedPayload(userText, config.messageEnrichment, undefined);
+      const res = await apiClient.sendMessage(conversationId, apiText, inputParams);
       const elapsed = Math.round(performance.now() - _t0);
       const assistantText = stringifyPayload(
         res?.payload?.value ?? res?.payload ?? '',
@@ -116,10 +151,15 @@ export function useChat() {
       setIsTyping(true);
 
       try {
+        const { apiText, inputParams: enrichedParams } = buildEnrichedPayload(
+          userText,
+          config.messageEnrichment,
+          inputParams,
+        );
         const res = await apiClient.sendMessage(
           conversationId,
-          userText,
-          inputParams,
+          apiText,
+          enrichedParams,
         );
         const assistantText = stringifyPayload(
           res?.payload?.value ?? res?.payload ?? '',
