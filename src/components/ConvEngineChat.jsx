@@ -28,6 +28,14 @@ function resolveThemeStyle(theme) {
   return Object.keys(style).length ? style : undefined;
 }
 
+function isSolidColorToken(value) {
+  return (
+    typeof value === 'string' &&
+    value.trim().length > 0 &&
+    !/gradient\s*\(/i.test(value)
+  );
+}
+
 /**
  * ConvEngineChat — the single public component for consumers.
  *
@@ -103,6 +111,8 @@ export function ConvEngineChat({
   const rootClass = [
     'ce-chat-root',
     mode === 'fullscreen' ? 'ce-chat-root--fullscreen' : '',
+    config.debugHighlightRenderers ? 'ce-debug-highlight-renderers' : '',
+    config.debugDisableAnimations  ? 'ce-debug-no-animations'        : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -129,6 +139,25 @@ export function ConvEngineChat({
   const cp = resolveColor(config.panelBg);         if (cp) configColors['bg-panel']          = cp;
   const cc = resolveColor(config.composerBg);      if (cc) configColors['bg-composer']       = cc;
   const ci = resolveColor(config.iconColor);       if (ci) configColors['icon-color']         = ci;
+  const cuib = resolveColor(config.userIconBg);    if (cuib) configColors['avatar-user-bg']    = cuib;
+  const cuic = resolveColor(config.userIconColor); if (cuic) configColors['avatar-user-color'] = cuic;
+  const caib = resolveColor(config.agentIconBg);   if (caib) configColors['avatar-agent-bg']   = caib;
+  const caic = resolveColor(config.agentIconColor);
+  if (caic) {
+    configColors['avatar-agent-color'] = caic;
+  } else if (isSolidColorToken(ca)) {
+    // If agent bubble bg is customized to a solid color, mirror that tone for
+    // the avatar icon so it stays solid (user-avatar-like) instead of faded.
+    configColors['avatar-agent-color'] = ca;
+  }
+
+  // Time label & date chip colors
+  const ctlb  = resolveColor(config.timeLabelBg);           if (ctlb)  configColors['time-label-bg']     = ctlb;
+  const ctlc  = resolveColor(config.timeLabelColor);        if (ctlc)  configColors['time-label-color']  = ctlc;
+  const ctlbd = resolveColor(config.timeLabelBorderColor);  if (ctlbd) configColors['time-label-border'] = ctlbd;
+  const cdlb  = resolveColor(config.dateLabelBg);           if (cdlb)  configColors['date-chip-bg']      = cdlb;
+  const cdlc  = resolveColor(config.dateLabelColor);        if (cdlc)  configColors['date-chip-color']   = cdlc;
+  const cdlbd = resolveColor(config.dateLabelBorderColor);  if (cdlbd) configColors['date-chip-border']  = cdlbd;
 
   // Merge: theme wins over config colors (explicit CSS var overrides take priority)
   const rootStyle = resolveThemeStyle({ ...configColors, ...theme }) ?? {};

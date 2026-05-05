@@ -283,6 +283,8 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
           showDarkModeLightMode={config.showDarkModeLightMode}
           showAudit={false}
           showHeaderDot={config.showHeaderDot}
+          showTransportBadge={config.showTransportBadge}
+          transport={config.stream?.enabled ? (config.stream?.transport ?? 'sse') : 'rest'}
           isDark={isDark}
           onToggleTheme={toggleTheme}
           onDragStart={onTitleDragStart}

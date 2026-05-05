@@ -122,6 +122,14 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
           <div className="ce-header-brand">
             {config.showHeaderDot && <span className="ce-header-dot" aria-hidden="true" />}
             <span className="ce-header-title">{config.title}</span>
+            {config.showTransportBadge && (
+              <span
+                className={`ce-transport-badge ce-transport-badge--${(config.stream?.enabled ? (config.stream?.transport ?? 'sse') : 'rest').toLowerCase()}`}
+                aria-label={`Transport: ${(config.stream?.enabled ? (config.stream?.transport ?? 'sse') : 'rest').toUpperCase()}`}
+              >
+                {(config.stream?.enabled ? (config.stream?.transport ?? 'sse') : 'rest').toUpperCase()}
+              </span>
+            )}
           </div>
           <div className="ce-fullscreen-header-actions">
             {config.showNewChat && (

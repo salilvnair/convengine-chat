@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, useRef } from 'react';
 import { createApiClient } from '../api/client.js';
+import { createStreamClient } from '../api/stream.js';
 import { createClientId } from '../utils/uuid.js';
 
 /* ── Context ──────────────────────────────────────────────────────────────── */
@@ -26,6 +27,15 @@ export function ConvEngineChatProvider({ config = {}, children }) {
     () => createApiClient(config.apiHost ?? '', config.apiEndpoints ?? {}),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [config.apiHost, JSON.stringify(config.apiEndpoints)],
+  );
+
+  const streamEnabled = !!(config.stream?.enabled);
+  const streamClient = useMemo(
+    () => streamEnabled
+      ? createStreamClient(config.apiHost ?? '', config.stream ?? {})
+      : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [streamEnabled, config.apiHost, JSON.stringify(config.stream)],
   );
 
   const resolvedConfig = useMemo(
@@ -77,6 +87,49 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       //   props:   object,         // json mode only — merged into inputParams
       // }
       messageEnrichment: config.messageEnrichment ?? null,
+      // ── Streaming ────────────────────────────────────────────
+      // config.stream: { enabled?: boolean, transport?: 'sse'|'stomp', wsBase?: string }
+      // When enabled, the widget subscribes to the SSE/STOMP stream after each send,
+      // reflecting STEP_ENTER progress and live ASSISTANT_OUTPUT in the bubble.
+      stream: {
+        enabled:   streamEnabled,
+        transport: config.stream?.transport ?? 'sse',
+        wsBase:    config.stream?.wsBase    ?? null,
+      },      // ── Transport badge ───────────────────────────────────
+      // When true, a small REST / SSE / STOMP badge appears in the chat header.
+      // Useful for demos and debugging — default false.
+      showTransportBadge: config.showTransportBadge ?? false,
+      // ── Debug flags ───────────────────────────────────────
+      // All debug flags default false — zero cost in production.
+      // debugShowVerbose        : always show “Agent is thinking…” without sending a message.
+      // debugShowPayload         : raw payload pre-block under every assistant bubble.
+      // debugShowRenderer        : chip showing which renderer key matched (e.g. "default", "faq-answer").
+      // debugShowTimestamps      : HH:mm:ss timestamp chip on every bubble.
+      // debugShowMessageId       : truncated bubble id chip on every bubble.
+      // debugSimulateDelay (ms)  : artificial delay before every API response (0 = off).
+      // debugSimulateError       : every send throws a simulated error bubble — no real API call made.
+      // debugHighlightRenderers  : dashed outline around every bubble; amber=user, blue=agent.
+      // debugDisableAnimations   : kills all CSS transitions & animations on the widget.
+      debugShowVerbose:          config.debugShowVerbose          ?? false,
+      debugShowPayload:          config.debugShowPayload          ?? false,
+      debugShowRenderer:         config.debugShowRenderer         ?? false,
+      debugShowTimestamps:       config.debugShowTimestamps       ?? false,
+      debugShowMessageId:        config.debugShowMessageId        ?? false,
+      debugSimulateDelay:        config.debugSimulateDelay        ?? 0,
+      debugSimulateError:        config.debugSimulateError        ?? false,
+      debugHighlightRenderers:   config.debugHighlightRenderers   ?? false,
+      debugDisableAnimations:    config.debugDisableAnimations    ?? false,
+
+      // ── Bubble time caption & date separator chips ────────────────────
+      // showBubbleTime    : renders an "h:mm A" caption below every bubble.
+      // bubbleTimeFormat  : token string passed to formatTime() — e.g. 'h:mm A', 'HH:mm', 'h:mm:ss A'.
+      // showDateSeparators: sticky date chip between day groups.
+      // dateSeparatorFormat: 'auto' (“Today / Yesterday / ddd, MMM D”) or any date token string.
+      showBubbleTime:      config.showBubbleTime      ?? false,
+      bubbleTimeFormat:    config.bubbleTimeFormat     ?? 'h:mm A',
+      showDateSeparators:  config.showDateSeparators   ?? false,
+      dateSeparatorFormat: config.dateSeparatorFormat  ?? 'auto',
+      dateSeparatorShape:  config.dateSeparatorShape   ?? 'round',
     }),
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.
@@ -85,8 +138,8 @@ export function ConvEngineChatProvider({ config = {}, children }) {
   );
 
   const ctx = useMemo(
-    () => ({ conversationId, apiClient, config: resolvedConfig }),
-    [conversationId, apiClient, resolvedConfig],
+    () => ({ conversationId, apiClient, streamClient, config: resolvedConfig }),
+    [conversationId, apiClient, streamClient, resolvedConfig],
   );
 
   // ── Shared chat state — lives here so it survives mode switches ──────────

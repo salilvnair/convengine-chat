@@ -9,6 +9,8 @@ export function ChatHeader({
   showDarkModeLightMode = false,
   showAudit = false,
   showHeaderDot = true,
+  showTransportBadge = false,
+  transport = 'rest',
   isDark = false,
   auditOpen = false,
   onToggleTheme,
@@ -29,6 +31,11 @@ export function ChatHeader({
       >
         {showHeaderDot && <span className="ce-header-dot" aria-hidden="true" />}
         <span className="ce-header-title">{title}</span>
+        {showTransportBadge && (
+          <span className={`ce-transport-badge ce-transport-badge--${transport.toLowerCase()}`} aria-label={`Transport: ${transport.toUpperCase()}`}>
+            {transport.toUpperCase()}
+          </span>
+        )}
       </div>
 
       <div className="ce-header-actions">

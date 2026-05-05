@@ -16,6 +16,7 @@
 - [Component Props](#component-props)
 - [config Object](#config-object)
 - [Backend Routes](#backend-routes)
+- [Streaming (SSE / STOMP)](#streaming-sse--stomp)
 - [Color Theming](#color-theming)
 - [Theme Tokens](#theme-tokens)
 - [Custom Icons](#custom-icons)
@@ -151,6 +152,7 @@ const myRenderer = {
     showLayoutPicker:      true,    // mode-picker button (panel only)
     showMaximize:          true,    // expand-to-fullscreen button (panel only)
     showMinimize:          true,    // minimize button (panel only)
+    showTransportBadge:    false,   // REST / SSE / STOMP badge in header (panel, sidepanel, fullscreen)
 
     // ── Appearance ────────────────────────────────────────────────────────
     defaultDark:    false,          // open in dark mode on first render
@@ -178,6 +180,13 @@ const myRenderer = {
     // ── Lifecycle callbacks ───────────────────────────────────────────────
     onMessage:  (text) => console.log('user sent:', text),
     onResponse: (text) => console.log('AI replied:', text),
+
+    // ── Streaming (SSE / STOMP) ───────────────────────────────────────────
+    stream: {
+      enabled:   false,         // set true to activate; requires a server SSE endpoint
+      transport: 'sse',         // 'sse' (default) | 'stomp'
+      // wsBase: 'http://localhost:8080',  // STOMP only — library connects to {wsBase}/ws-convengine
+    },
   }}
 
   // ── CSS token overrides (auto-prefixed with --ce-) ────────────────────
@@ -261,6 +270,8 @@ const myRenderer = {
 | `showLayoutPicker` | `boolean` | `true` | panel |
 | `showMaximize` | `boolean` | `true` | panel |
 | `showMinimize` | `boolean` | `true` | panel |
+| `showEngineStatus` | `boolean` | `true` | sidepanel, fullscreen |
+| `showTransportBadge` | `boolean` | `false` | panel, sidepanel, fullscreen |
 
 ### Appearance
 
@@ -284,12 +295,56 @@ See [Color Theming](#color-theming) for full documentation.
 | `composerBg` | `--ce-bg-composer` | Composer (input area) background |
 | `iconColor` | `--ce-icon-color` | Resting color of header icon buttons (hover always shows accent) |
 
+### Streaming
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `stream` | `object` | `undefined` | Enable real-time event streaming. See [Streaming (SSE / STOMP)](#streaming-sse--stomp). |
+| `stream.enabled` | `boolean` | `false` | Activate the stream connection on mount. |
+| `stream.transport` | `"sse" \| "stomp"` | `"sse"` | Transport protocol. `"sse"` uses the browser EventSource API; `"stomp"` uses STOMP over SockJS WebSocket. |
+| `stream.wsBase` | `string` | `apiHost` | **STOMP only.** The URL of your WebSocket server — the library appends `/ws-convengine` and opens a SockJS connection there. Example: if `wsBase` is `http://localhost:8080`, the actual connection is `http://localhost:8080/ws-convengine`. When omitted, `apiHost` is used automatically. Has no effect when `transport: "sse"`. |
+
 ### Callbacks
 
 | Key | Type | Description |
 |---|---|---|
 | `onMessage` | `(text: string) => void` | Fired when the user sends a message. |
 | `onResponse` | `(text: string) => void` | Fired when an assistant response arrives. |
+
+### Debug Flags
+
+All flags default to `false` and are zero-cost when off — no DOM is rendered.  
+Safe to ship in production as long as flags stay `false`.
+
+| Key | What it does |
+|---|---|
+| `debugShowVerbose` | Always render the "Agent is thinking…" typing indicator — no message needed. Great for previewing progress text styles. |
+| `debugShowPayload` | Show the raw response payload in a monospace block below every assistant bubble. JSON is pretty-printed automatically. Essential during renderer development. |
+| `debugShowRenderer` | Show a green chip on every assistant bubble with the matched renderer key (`default`, `faq-answer`, your custom key, or `error`). |
+| `debugShowTimestamps` | Show an `HH:mm:ss` chip on every bubble (user and assistant). |
+| `debugShowMessageId` | Show a truncated bubble `id` chip on every bubble. Useful for correlating React state with rendered DOM. |
+| `debugSimulateDelay` | Number (ms). Add an artificial delay before every API response. Use to preview loading states and typing indicator animations. Set to `0` to disable. |
+| `debugSimulateError` | Force every send to return an error bubble instead of calling the API. Use to preview error bubble styling and test recovery flows. |
+| `debugHighlightRenderers` | Add a dashed outline around every message bubble — amber for user, blue for agent. Use to verify renderer boundaries. |
+| `debugDisableAnimations` | Kill all CSS transitions and animations on the widget. Useful for screenshot testing or inspecting layout. |
+
+```jsx
+<ConvEngineChat
+  config={{
+    apiHost: 'http://localhost:8080',
+    // Turn on any combination:
+    debugShowVerbose:    true,  // always show typing indicator
+    debugShowPayload:    true,  // raw payload block under each assistant bubble
+    debugShowRenderer:  true,  // renderer name chip
+    debugShowTimestamps:    true,  // HH:mm:ss on every bubble
+    debugShowMessageId:     true,  // truncated id on every bubble
+    debugSimulateDelay:     1500,  // 1.5 s artificial delay
+    debugSimulateError:     true,  // always show error bubble
+    debugHighlightRenderers:true,  // dashed outline on each bubble
+    debugDisableAnimations: true,  // kill all transitions/animations
+  }}
+/>
+```
 
 ---
 
@@ -379,6 +434,309 @@ app.get( '/api/v1/audit/:conversationId', auditHandler);
 ```
 
 > When an `apiEndpoints` value starts with `http` it is used as-is (full URL). When it starts with `/` it is treated as a path on the same origin regardless of `apiHost`.
+
+---
+
+## Streaming (SSE / STOMP)
+
+ConvEngine Chat can subscribe to a real-time server-sent event (SSE) stream or a STOMP WebSocket stream alongside the normal REST conversation endpoint. When streaming is enabled:
+
+- **`VERBOSE` events** are surfaced as animated progress text in the typing indicator while the user waits for the REST response.
+- **Every stream event** increments the audit revision counter, which triggers the AuditPanel to refetch via REST.
+- **`ASSISTANT_OUTPUT` or `ENGINE_RETURN` events** smoothly clear the progress text.
+
+A progress text step is displayed for a minimum of **9 seconds** before being replaced by the next step, preventing flicker when events arrive rapidly.
+
+### Enabling streaming
+
+```jsx
+<ConvEngineChat
+  config={{
+    apiHost: 'http://localhost:8080',
+    stream: {
+      enabled:   true,
+      transport: 'sse',        // 'sse' (default) | 'stomp'
+    },
+    showTransportBadge: true,  // optional — shows REST / SSE / STOMP badge in header
+  }}
+/>
+```
+
+---
+
+### Live mock — test streaming without a real backend
+
+Copy this file, run it with Node.js 18+, then point the widget at `http://localhost:9000`. No framework, no dependencies.
+
+```js
+// mock-sse-server.mjs  —  run with: node mock-sse-server.mjs
+import http from 'node:http';
+
+// Registry: conversationId → Set of active SSE response objects
+const registry = new Map();
+
+function send(res, eventName, data) {
+  res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+const server = http.createServer((req, res) => {
+  // CORS — allow the browser widget to connect cross-origin
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  const url = new URL(req.url, 'http://localhost');
+
+  // ── SSE stream endpoint ──────────────────────────────────────────────
+  // GET /api/v1/conversation/stream/:conversationId
+  if (req.method === 'GET' && url.pathname.startsWith('/api/v1/conversation/stream/')) {
+    const conversationId = url.pathname.split('/').pop();
+
+    res.writeHead(200, {
+      'Content-Type':  'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection':    'keep-alive',
+    });
+
+    // Register this connection
+    if (!registry.has(conversationId)) registry.set(conversationId, new Set());
+    registry.get(conversationId).add(res);
+    send(res, 'CONNECTED', {});
+
+    req.on('close', () => {
+      registry.get(conversationId)?.delete(res);
+    });
+    return;
+  }
+
+  // ── Message endpoint ─────────────────────────────────────────────────
+  // POST /api/v1/conversation/message
+  if (req.method === 'POST' && url.pathname === '/api/v1/conversation/message') {
+    let body = '';
+    req.on('data', (chunk) => (body += chunk));
+    req.on('end', () => {
+      const { conversationId, message } = JSON.parse(body);
+      const listeners = registry.get(conversationId) ?? new Set();
+
+      // Fire fake VERBOSE progress steps while the "backend" thinks
+      const steps = [
+        '🔍 Parsing intent…',
+        '🧠 Matching context…',
+        '⚙️  Running step…',
+        '✍️  Generating response…',
+      ];
+      steps.forEach((text, i) => {
+        setTimeout(() => {
+          listeners.forEach((r) => send(r, 'VERBOSE', { verbose: { text } }));
+        }, (i + 1) * 600);
+      });
+
+      // Send ENGINE_RETURN then the REST response after a short delay
+      const totalDelay = steps.length * 600 + 400;
+      setTimeout(() => {
+        listeners.forEach((r) => send(r, 'ENGINE_RETURN', { stage: 'ENGINE_RETURN' }));
+
+        // REST response body
+        const reply = { response: `Echo: "${message}" — reply from mock server.` };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(reply));
+      }, totalDelay);
+    });
+    return;
+  }
+
+  res.writeHead(404); res.end();
+});
+
+server.listen(9000, () => console.log('Mock SSE server → http://localhost:9000'));
+```
+
+Then configure the widget to use it:
+
+```jsx
+<ConvEngineChat
+  config={{
+    apiHost:            'http://localhost:9000',
+    stream: { enabled: true, transport: 'sse' },
+    showTransportBadge: true,
+  }}
+/>
+```
+
+What you will see:
+1. The header badge switches from `REST` → `SSE`.
+2. Every time you send a message, the typing indicator shows the four progress steps one at a time.
+3. Once the mock delay completes, the progress clears and the echo reply appears.
+
+---
+
+### SSE transport
+
+The library opens an `EventSource` connection to:
+
+```
+GET {apiHost}/api/v1/conversation/stream/{conversationId}
+```
+
+The server must respond with `Content-Type: text/event-stream` and send named events. All recognised event types are listed below.
+
+#### Recognised event names
+
+The client registers listeners for each of these named SSE event types:
+
+```
+CONNECTED, USER_INPUT,
+DIALOGUE_ACT_LLM_INPUT, DIALOGUE_ACT_LLM_OUTPUT,
+STEP_ENTER, STEP_EXIT, STEP_ERROR,
+ASSISTANT_OUTPUT, ENGINE_RETURN,
+MCP_TOOL_CALL, MCP_TOOL_RESULT, MCP_TOOL_ERROR, MCP_FINAL_ANSWER,
+TOOL_ORCHESTRATION_REQUEST, TOOL_ORCHESTRATION_RESULT, TOOL_ORCHESTRATION_ERROR,
+RULE_MATCH, RULE_APPLIED, RULE_NO_MATCH,
+PENDING_ACTION_EXECUTED, PENDING_ACTION_REJECTED, PENDING_ACTION_FAILED,
+CORRECTION_STEP_RETRY_REQUESTED,
+POLICY_BLOCK,
+VERBOSE
+```
+
+Any `message` events (without a named type) are also captured and dispatched as stage `MESSAGE`.
+
+#### VERBOSE event payload
+
+Send progress text to the typing indicator by emitting a `VERBOSE` event whose `data` field contains a JSON payload in one of these shapes:
+
+```json
+// Shape 1 — top-level verbose object with text
+{ "verbose": { "text": "🔍 Parsing intent…" } }
+
+// Shape 2 — nested under payload
+{ "payload": { "verbose": { "text": "🧠 Matching context…" } } }
+
+// Shape 3 — verbose message string
+{ "verbose": { "message": "Step in progress…" } }
+
+// Shape 4 — verbose error message
+{ "verbose": { "errorMessage": "Step failed, retrying…" } }
+```
+
+Extraction priority order: `text` → `message` → `errorMessage`. The `payload.verbose` nesting (shape 2) is also checked for all three fields in the same order.
+
+#### Minimal SSE server example (Next.js App Router)
+
+```js
+// app/api/v1/conversation/stream/[conversationId]/route.js
+export const dynamic = 'force-dynamic';
+
+export async function GET(request, { params }) {
+  const { conversationId } = await params;
+  let controller;
+
+  const stream = new ReadableStream({
+    start(ctrl) {
+      controller = ctrl;
+      // Signal that the connection is open
+      const connected = `event: CONNECTED\ndata: {}\n\n`;
+      ctrl.enqueue(new TextEncoder().encode(connected));
+    },
+    cancel() {
+      // Client disconnected — clean up any registrations here
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type':  'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection:      'keep-alive',
+    },
+  });
+}
+```
+
+To send events from another route (e.g. the message handler), use a shared in-memory registry that maps `conversationId` to the active `ReadableStreamDefaultController`.
+
+#### Minimal SSE server example (Express)
+
+```js
+app.get('/api/v1/conversation/stream/:conversationId', (req, res) => {
+  res.setHeader('Content-Type',  'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection',    'keep-alive');
+  res.flushHeaders();
+
+  // Send CONNECTED event
+  res.write('event: CONNECTED\ndata: {}\n\n');
+
+  // Keep the connection alive and send events from your engine
+  // e.g.:
+  //   res.write(`event: VERBOSE\ndata: ${JSON.stringify({ verbose: { text: 'Parsing…' } })}\n\n`);
+  //   res.write(`event: ENGINE_RETURN\ndata: {}\n\n`);
+
+  req.on('close', () => res.end());
+});
+```
+
+---
+
+### STOMP transport
+
+The library uses `@stomp/stompjs` and `sockjs-client` for the STOMP transport. These packages are **not bundled** in the library — they must be installed separately and exposed on `globalThis`.
+
+#### Prerequisites
+
+```bash
+npm install @stomp/stompjs sockjs-client
+```
+
+```js
+// In your app entry (e.g. main.jsx or layout.jsx):
+import StompJs from '@stomp/stompjs';
+import SockJS  from 'sockjs-client';
+globalThis.StompJs = StompJs;
+globalThis.SockJS  = SockJS;
+```
+
+#### `wsBase` — the WebSocket server URL
+
+`wsBase` is the **base URL of your WebSocket server** — not the full path. The library constructs the actual SockJS connection URL by appending `/ws-convengine`:
+
+```
+connection URL = {wsBase}/ws-convengine
+```
+
+Examples:
+
+| `wsBase` | Actual SockJS URL the library connects to |
+|---|---|
+| `http://localhost:8080` | `http://localhost:8080/ws-convengine` |
+| `https://api.example.com` | `https://api.example.com/ws-convengine` |
+| _(omitted)_ | uses `apiHost` + `/ws-convengine` |
+
+**When to set it:** only when your WebSocket server runs at a different origin or port than your REST API. If both run on the same host, omit `wsBase` entirely.
+
+#### Server subscription path
+
+Once connected, the library subscribes to the STOMP topic:
+
+```
+/topic/convengine/audit/{conversationId}
+```
+
+#### Usage
+
+```jsx
+<ConvEngineChat
+  config={{
+    apiHost: 'http://localhost:8080',
+    stream: {
+      enabled:   true,
+      transport: 'stomp',
+      wsBase:    'http://localhost:8080',   // optional — defaults to apiHost
+    },
+  }}
+/>
+```
+
+> If `StompJs` or `SockJS` are not found on `globalThis` at connection time, the library logs a console warning and falls back to a no-op subscription (no crash).
 
 ---
 

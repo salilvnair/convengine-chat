@@ -5,6 +5,7 @@
   "type": "module",
   "main": "./dist/convengine-chat.umd.cjs",
   "module": "./dist/convengine-chat.es.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/convengine-chat.es.js",
@@ -14,6 +15,7 @@
   },
   "files": [
     "dist",
+    "index.d.ts",
     "README.md",
     "LICENSE"
   ],

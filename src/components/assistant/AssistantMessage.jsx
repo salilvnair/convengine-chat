@@ -4,6 +4,18 @@ import { containsMarkdownTable } from '../../utils/assistantContent.js';
 import { resolveAssistantRenderer } from '../../renderers/core/RendererRegistry.jsx';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
 import { useChatActions } from '../../context/ChatActionsContext.jsx';
+import { formatTime } from '../../utils/dateFormat.js';
+
+/** Tiny monospace chip used by all debug overlays. */
+function DebugChip({ variant, children }) {
+  return <span className={`ce-debug-chip ce-debug-chip--${variant}`}>{children}</span>;
+}
+
+/** HH:mm:ss from a Unix ms timestamp (24h — for debug chips only). */
+function fmtTime(ts) {
+  if (ts == null) return '';
+  return new Date(ts).toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 
 /**
  * Renders a single assistant message bubble (left-aligned).
@@ -33,6 +45,27 @@ export function AssistantMessage({ bubble }) {
   const hideBubble = !isError && resolved?.hideBubble === true;
 
   const Renderer = resolved?.Component;
+
+  // ── Time caption (showBubbleTime) —————————————————————————————————————
+  const timeCaption = config.showBubbleTime && bubble.sentAt != null ? (
+    <span className="ce-bubble-time">{formatTime(bubble.sentAt, config.bubbleTimeFormat ?? 'h:mm A')}</span>
+  ) : null;
+
+  // ── Debug overlays ──────────────────────────────────────────────────────
+  const hasDebugChips = config.debugShowMessageId || config.debugShowTimestamps || config.debugShowRenderer;
+  const hasDebug      = hasDebugChips || config.debugShowPayload;
+  const debugChips = hasDebugChips ? (
+    <div className="ce-debug-chips">
+      {config.debugShowMessageId  && <DebugChip variant="id">id:{bubble.id.slice(0, 8)}</DebugChip>}
+      {config.debugShowTimestamps && bubble.sentAt != null && <DebugChip variant="time">{fmtTime(bubble.sentAt)}</DebugChip>}
+      {config.debugShowRenderer   && <DebugChip variant="renderer">renderer:{isError ? 'error' : (resolved?.key ?? '?')}</DebugChip>}
+    </div>
+  ) : null;
+  const debugPayload = config.debugShowPayload ? (
+    <div className="ce-debug-payload">
+      <pre>{(() => { try { return JSON.stringify(JSON.parse(bubble.text), null, 2); } catch { return bubble.text ?? ''; } })()}</pre>
+    </div>
+  ) : null;
 
   return (
     <article
@@ -71,6 +104,8 @@ export function AssistantMessage({ bubble }) {
             actions={actions}
             onSubmit={actions.submit}
           />
+          {timeCaption}
+          {hasDebug && <>{debugChips}{debugPayload}</>}
         </div>
       ) : (
         <div className="ce-message-content">
@@ -101,6 +136,8 @@ export function AssistantMessage({ bubble }) {
               </pre>
             )}
           </div>
+          {timeCaption}
+          {hasDebug && <>{debugChips}{debugPayload}</>}
         </div>
       )}
     </article>

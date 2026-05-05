@@ -29,7 +29,6 @@ export { useIcons }   from './hooks/useIcons.js';
 // ── Renderer extension API ──────────────────────────────────────────────────
 export { resolveAssistantRenderer, DefaultRenderer } from './renderers/core/RendererRegistry.jsx';
 export { builtInRendererProviders }                  from './renderers/providers/index.js';
-export { faqAnswerRendererProvider, FaqAnswerRenderer } from './renderers/providers/FaqAnswerRenderer.jsx';
 
 // ── Utility exports (useful for building custom renderers) ──────────────────
 export { parseAssistantSegments, containsMarkdownTable, prettifyHeader } from './utils/assistantContent.js';

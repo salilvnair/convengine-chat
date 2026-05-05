@@ -24,6 +24,23 @@
      On hover they shift to --ce-color-accent. Override to tint your own brand. */
   --ce-icon-color:           #64748b;  /* slate-500 */
 
+  /* Avatar / icon chip colors — mirrors the user avatar pattern on both sides.
+     User:  circle = 14% tint of accent,      icon = full accent color.
+     Agent: circle = 12% tint of icon-color,  icon = icon-color.
+     Override via agentIconBg / agentIconColor config props or --ce-avatar-* CSS vars. */
+  --ce-avatar-user-bg:       var(--ce-color-accent-light);
+  --ce-avatar-user-color:    var(--ce-color-accent);
+  --ce-avatar-agent-bg:      color-mix(in srgb, var(--ce-icon-color) 12%, transparent);
+  --ce-avatar-agent-color:   var(--ce-icon-color);
+
+  /* Bubble time caption & date chip */
+  --ce-time-label-bg:        transparent;
+  --ce-time-label-color:     var(--ce-text-secondary);
+  --ce-time-label-border:    transparent;
+  --ce-date-chip-bg:         var(--ce-color-accent-light);
+  --ce-date-chip-color:      var(--ce-color-accent);
+  --ce-date-chip-border:     transparent;
+
   /* Backgrounds */
   --ce-bg-panel:             #ffffff;
   --ce-bg-header:            #f8f9ff;
@@ -91,7 +108,9 @@
 
   --ce-icon-color:           #9ca3af;  /* gray-400 — softer on dark bg */
 
-  --ce-border-color:         #3a3a3a;
+  --ce-avatar-agent-bg:      color-mix(in srgb, var(--ce-icon-color) 12%, transparent);
+  --ce-avatar-agent-color:   var(--ce-icon-color);
+  --ce-date-chip-bg:         var(--ce-color-accent-light);
   --ce-shadow-panel:         0 4px 32px rgba(0,0,0,0.5);
 }
 
@@ -523,6 +542,35 @@
   text-overflow: ellipsis;
 }
 
+/* ── Transport badge (REST / SSE / STOMP) ────────────────────────────────── */
+.ce-chat-root .ce-transport-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  line-height: 1.4;
+  user-select: none;
+  flex-shrink: 0;
+}
+.ce-chat-root .ce-transport-badge--rest {
+  background: var(--ce-bg-chip, #f1f5f9);
+  color: var(--ce-text-secondary);
+}
+.ce-chat-root .ce-transport-badge--sse,
+.ce-chat-root .ce-transport-badge--stomp {
+  background: #dcfce7;
+  color: #15803d;
+}
+[data-ce-theme=dark] .ce-chat-root .ce-transport-badge--sse,
+[data-ce-theme=dark] .ce-chat-root .ce-transport-badge--stomp {
+  background: rgba(21, 128, 61, 0.22);
+  color: #4ade80;
+}
+
 .ce-chat-root .ce-header-actions {
   display: flex;
   align-items: center;
@@ -670,14 +718,18 @@
 }
 
 .ce-chat-root .ce-avatar--user {
-  background: var(--ce-color-accent-light);
-  color: var(--ce-color-accent);
+  background: var(--ce-avatar-user-bg);
+  color: var(--ce-avatar-user-color);
 }
 
 .ce-chat-root .ce-avatar--agent {
-  background: var(--ce-bg-bubble-agent);
-  color: var(--ce-text-secondary);
-  border: 1px solid var(--ce-border-color);
+  background: var(--ce-avatar-agent-bg);
+  color: var(--ce-avatar-agent-color);
+}
+
+/* Thinking row: centre-align avatar with the text strip (not flex-end like bubbles) */
+.ce-chat-root .ce-message-thinking {
+  align-items: center;
 }
 
 .ce-chat-root .ce-avatar--thinking {
@@ -1836,4 +1888,136 @@
 .ce-chat-root .ce-sidepanel .ce-icon {
   width: 15px;
   height: 15px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DEBUG OVERLAYS — rendered only when debug* config flags are set.
+   All rules are no-cost in production (elements simply aren't mounted).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.ce-chat-root .ce-debug-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.ce-chat-root .ce-debug-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.7;
+  letter-spacing: 0.03em;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ce-chat-root .ce-debug-chip--id       { color: #8b5cf6; background: rgba(139,92,246,.06); }
+.ce-chat-root .ce-debug-chip--time     { color: #0ea5e9; background: rgba(14,165,233,.06); }
+.ce-chat-root .ce-debug-chip--renderer { color: #10b981; background: rgba(16,185,129,.06); }
+
+.ce-chat-root .ce-debug-payload {
+  margin-top: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: rgba(15,23,42,.04);
+  border: 1px solid rgba(15,23,42,.08);
+  padding: 8px 10px;
+}
+
+.ce-chat-root .ce-debug-payload pre {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: 10px;
+  line-height: 1.55;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.ce-chat-root[data-ce-theme="dark"] .ce-debug-chip--id       { color: #a78bfa; background: rgba(167,139,250,.08); }
+.ce-chat-root[data-ce-theme="dark"] .ce-debug-chip--time     { color: #38bdf8; background: rgba(56,189,248,.08); }
+.ce-chat-root[data-ce-theme="dark"] .ce-debug-chip--renderer { color: #34d399; background: rgba(52,211,153,.08); }
+
+.ce-chat-root[data-ce-theme="dark"] .ce-debug-payload {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.08);
+}
+
+.ce-chat-root[data-ce-theme="dark"] .ce-debug-payload pre {
+  color: #94a3b8;
+}
+
+/* ── Bubble time caption (showBubbleTime) ── */
+.ce-chat-root .ce-bubble-time {
+  font-size: 0.68rem;
+  color: var(--ce-time-label-color);
+  background: var(--ce-time-label-bg);
+  border: 1px solid var(--ce-time-label-border);
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  margin-top: 2px;
+  padding: 0 2px;
+  font-family: var(--ce-font-family);
+}
+.ce-chat-root .ce-message--user .ce-bubble-time {
+  text-align: right;
+}
+.ce-chat-root .ce-message--assistant .ce-bubble-time {
+  text-align: left;
+}
+
+/* ── Date separator chip (showDateSeparators) ──
+   position: sticky makes each chip stick to the top of the scroll container
+   (the .ce-thread has overflow-y: auto) until the next chip pushes it up —
+   exactly the WhatsApp behavior. */
+.ce-chat-root .ce-date-separator {
+  position: sticky;
+  top: 4px;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+.ce-chat-root .ce-date-chip {
+  background: var(--ce-date-chip-bg);
+  color: var(--ce-date-chip-color);
+  border: 1px solid var(--ce-date-chip-border);
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--ce-font-family);
+}
+.ce-chat-root .ce-date-chip--rect {
+  border-radius: 6px;
+}
+.ce-chat-root.ce-debug-highlight-renderers .ce-bubble {
+  outline: 2px dashed #22c55e;
+  outline-offset: 2px;
+}
+.ce-chat-root.ce-debug-highlight-renderers .ce-message--user .ce-bubble {
+  outline-color: #f59e0b;
+}
+.ce-chat-root.ce-debug-highlight-renderers .ce-message--agent .ce-bubble {
+  outline-color: #3b82f6;
+}
+
+/* ── debugDisableAnimations: kill all transitions & animations ── */
+.ce-chat-root.ce-debug-no-animations *,
+.ce-chat-root.ce-debug-no-animations *::before,
+.ce-chat-root.ce-debug-no-animations *::after {
+  transition: none !important;
+  animation:  none !important;
 }
