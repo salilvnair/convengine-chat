@@ -14,7 +14,7 @@
  *   D     Day number                  → 5
  *
  * Special date format values:
- *   'auto'  → "Today", "Yesterday", or "ddd, MMM D" for older dates (WhatsApp style)
+ *   'auto'  → "Today", "Yesterday", or "ddd, MMM D" for older dates
  *
  * Supported time tokens (used in bubbleTimeFormat):
  *   HH   Zero-padded 24-hour          → 14

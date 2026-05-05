@@ -217,7 +217,7 @@ export interface ConvEngineChatConfig {
    *  @default false */
   showDateSeparators?: boolean;
   /** Date format for the separator chip.
-   *  Use `'auto'` for "Today / Yesterday / ddd, MMM D" (WhatsApp style).
+   *  Use `'auto'` for "Today / Yesterday / ddd, MMM D".
    *  Supported tokens: `YYYY YY MMMM MMM MM M dddd ddd DD D`
    *  Examples: `'auto'`, `'ddd, MMM D'`, `'MMMM D, YYYY'`, `'DD/MM/YYYY'`
    *  @default 'auto' */

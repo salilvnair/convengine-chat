@@ -1990,8 +1990,7 @@
 
 /* ── Date separator chip (showDateSeparators) ──
    position: sticky makes each chip stick to the top of the scroll container
-   (the .ce-thread has overflow-y: auto) until the next chip pushes it up —
-   exactly the WhatsApp behavior. */
+   (the .ce-thread has overflow-y: auto) until the next chip pushes it up */
 .ce-chat-root .ce-date-separator {
   position: sticky;
   top: 4px;
