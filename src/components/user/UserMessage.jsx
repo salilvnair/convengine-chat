@@ -21,25 +21,27 @@ export function UserMessage({ bubble }) {
   ) : null;
   return (
     <article className="ce-message ce-message--user">
-      <div className="ce-avatar ce-avatar--user" aria-hidden="true">
-        <UserIcon />
-      </div>
-      <div className="ce-message-content">
-        <div className={`ce-bubble ce-bubble--user ${bubbleShapeClass(bubble.text)}`}>
-          <pre className="ce-bubble-text">{bubble.text}</pre>
+      <div className="ce-message-row">
+        <div className="ce-avatar ce-avatar--user" aria-hidden="true">
+          <UserIcon />
         </div>
-        {timeCaption}
-        {hasDebugChips && (
-          <div className="ce-debug-chips" style={{ justifyContent: 'flex-end' }}>
-            {config.debugShowTimestamps && bubble.sentAt != null && (
-              <span className="ce-debug-chip ce-debug-chip--time">{fmtTime(bubble.sentAt)}</span>
-            )}
-            {config.debugShowMessageId && (
-              <span className="ce-debug-chip ce-debug-chip--id">id:{bubble.id.slice(0, 8)}</span>
-            )}
+        <div className="ce-message-content">
+          <div className={`ce-bubble ce-bubble--user ${bubbleShapeClass(bubble.text)}`}>
+            <pre className="ce-bubble-text">{bubble.text}</pre>
           </div>
-        )}
+          {hasDebugChips && (
+            <div className="ce-debug-chips" style={{ justifyContent: 'flex-end' }}>
+              {config.debugShowTimestamps && bubble.sentAt != null && (
+                <span className="ce-debug-chip ce-debug-chip--time">{fmtTime(bubble.sentAt)}</span>
+              )}
+              {config.debugShowMessageId && (
+                <span className="ce-debug-chip ce-debug-chip--id">id:{bubble.id.slice(0, 8)}</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+      {timeCaption}
     </article>
   );
 }

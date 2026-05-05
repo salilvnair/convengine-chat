@@ -78,68 +78,82 @@ export function AssistantMessage({ bubble }) {
         .filter(Boolean)
         .join(' ')}
     >
-      <div
-        className={[
-          'ce-avatar',
-          'ce-avatar--agent',
-          isError ? 'ce-avatar--error' : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        aria-hidden="true"
-      >
-        <AgentIcon />
-        {isError && (
-          <span className="ce-avatar-error-badge" aria-hidden="true">
-            !
-          </span>
-        )}
-      </div>
-
       {hideBubble ? (
         // No bubble shell — the renderer component controls its own presentation.
-        <div className="ce-message-content ce-message-content--raw">
-          <Renderer
-            payload={resolved.payload}
-            actions={actions}
-            onSubmit={actions.submit}
-          />
-          {timeCaption}
-          {hasDebug && <>{debugChips}{debugPayload}</>}
-        </div>
-      ) : (
-        <div className="ce-message-content">
+        <div className="ce-message-row">
           <div
             className={[
-              'ce-bubble',
-              'ce-bubble--agent',
-              bubbleShapeClass(bubble.text),
-              isError ? 'ce-bubble--error' : '',
+              'ce-avatar',
+              'ce-avatar--agent',
+              isError ? 'ce-avatar--error' : '',
             ]
               .filter(Boolean)
               .join(' ')}
+            aria-hidden="true"
           >
-            {!isError ? (
-              // Pass the full `actions` object as the primary prop.
-              // `onSubmit` kept as a convenience alias for simple renderers.
-              <Renderer
-                payload={resolved.payload}
-                actions={actions}
-                onSubmit={actions.submit}
-              />
-            ) : (
-              <pre className="ce-bubble-text ce-bubble-text--error">
-                <span className="ce-error-prefix" aria-hidden="true">
-                  ⚠
-                </span>{' '}
-                {bubble.text}
-              </pre>
+            <AgentIcon />
+          </div>
+          <div className="ce-message-content ce-message-content--raw">
+            <Renderer
+              payload={resolved.payload}
+              actions={actions}
+              onSubmit={actions.submit}
+            />
+            {hasDebug && <>{debugChips}{debugPayload}</>}
+          </div>
+        </div>
+      ) : (
+        <div className="ce-message-row">
+          <div
+            className={[
+              'ce-avatar',
+              'ce-avatar--agent',
+              isError ? 'ce-avatar--error' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            aria-hidden="true"
+          >
+            <AgentIcon />
+            {isError && (
+              <span className="ce-avatar-error-badge" aria-hidden="true">
+                !
+              </span>
             )}
           </div>
-          {timeCaption}
-          {hasDebug && <>{debugChips}{debugPayload}</>}
+          <div className="ce-message-content">
+            <div
+              className={[
+                'ce-bubble',
+                'ce-bubble--agent',
+                bubbleShapeClass(bubble.text),
+                isError ? 'ce-bubble--error' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {!isError ? (
+                // Pass the full `actions` object as the primary prop.
+                // `onSubmit` kept as a convenience alias for simple renderers.
+                <Renderer
+                  payload={resolved.payload}
+                  actions={actions}
+                  onSubmit={actions.submit}
+                />
+              ) : (
+                <pre className="ce-bubble-text ce-bubble-text--error">
+                  <span className="ce-error-prefix" aria-hidden="true">
+                    ⚠
+                  </span>{' '}
+                  {bubble.text}
+                </pre>
+              )}
+            </div>
+            {hasDebug && <>{debugChips}{debugPayload}</>}
+          </div>
         </div>
       )}
+      {timeCaption}
     </article>
   );
 }

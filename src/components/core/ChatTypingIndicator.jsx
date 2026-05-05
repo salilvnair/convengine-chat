@@ -12,17 +12,19 @@ export function ChatTypingIndicator({ progressText }) {
 
   return (
     <article className="ce-message ce-message-assistant ce-message-thinking" aria-live="polite">
-      <div className="ce-avatar ce-avatar--agent ce-avatar--thinking">
-        <AgentIcon />
-      </div>
-      <div className="ce-message-content">
-        <div className="ce-thinking-strip">
-          <span className="ce-thinking-dots" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span className="ce-thinking-text">{label}</span>
+      <div className="ce-message-row">
+        <div className="ce-avatar ce-avatar--agent ce-avatar--thinking">
+          <AgentIcon />
+        </div>
+        <div className="ce-message-content">
+          <div className="ce-thinking-strip">
+            <span className="ce-thinking-dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+            <span className="ce-thinking-text">{label}</span>
+          </div>
         </div>
       </div>
     </article>

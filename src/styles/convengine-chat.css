@@ -684,8 +684,8 @@
    ══════════════════════════════════════════════════════════════════════════ */
 .ce-chat-root .ce-message {
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
   animation: ce-msg-in var(--ce-transition-med) both;
 }
 
@@ -694,14 +694,24 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* User — right-aligned */
+/* Inner row: avatar + bubble, bottom-aligned */
+.ce-chat-root .ce-message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* User — right-aligned column + row reversed */
 .ce-chat-root .ce-message--user {
+  align-items: flex-end;
+}
+
+.ce-chat-root .ce-message--user .ce-message-row {
   flex-direction: row-reverse;
-  justify-content: flex-start;
 }
 
 /* Wide variant for table responses */
-.ce-chat-root .ce-message--wide {
+.ce-chat-root .ce-message--wide .ce-message-row {
   align-items: flex-start;
 }
 
@@ -728,7 +738,7 @@
 }
 
 /* Thinking row: centre-align avatar with the text strip (not flex-end like bubbles) */
-.ce-chat-root .ce-message-thinking {
+.ce-chat-root .ce-message-thinking .ce-message-row {
   align-items: center;
 }
 
@@ -1963,12 +1973,16 @@
   border: 1px solid var(--ce-time-label-border);
   line-height: 1.5;
   letter-spacing: 0.01em;
-  margin-top: 2px;
+  margin-top: 3px;
   padding: 0 2px;
   font-family: var(--ce-font-family);
+  /* indent to align with bubble, not avatar */
+  margin-left: calc(var(--ce-avatar-size) + 10px);
 }
 .ce-chat-root .ce-message--user .ce-bubble-time {
   text-align: right;
+  margin-left: 0;
+  margin-right: calc(var(--ce-avatar-size) + 10px);
 }
 .ce-chat-root .ce-message--assistant .ce-bubble-time {
   text-align: left;
