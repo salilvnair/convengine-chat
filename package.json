@@ -8,6 +8,7 @@
   "types": "./index.d.ts",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "import": "./dist/convengine-chat.es.js",
       "require": "./dist/convengine-chat.umd.cjs"
     },
