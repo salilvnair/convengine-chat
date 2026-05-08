@@ -188,6 +188,7 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
             auditRevision={auditRevision}
             auditOpen={false}
             engineStatus={engineStatus}
+            onChipClick={(text) => submitFromRenderer(text)}
           />
         </div>
 

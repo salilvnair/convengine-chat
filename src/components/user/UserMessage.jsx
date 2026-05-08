@@ -27,7 +27,7 @@ export function UserMessage({ bubble }) {
         </div>
         <div className="ce-message-content">
           <div className={`ce-bubble ce-bubble--user ${bubbleShapeClass(bubble.text)}`}>
-            <pre className="ce-bubble-text">{bubble.text}</pre>
+            <span className="ce-bubble-text">{bubble.text}</span>
           </div>
           {hasDebugChips && (
             <div className="ce-debug-chips" style={{ justifyContent: 'flex-end' }}>

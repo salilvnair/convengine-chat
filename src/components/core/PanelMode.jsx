@@ -307,6 +307,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
             onFeedback={submitFeedback}
             auditRevision={auditRevision}
             auditOpen={false}
+            onChipClick={(text) => submitFromRenderer(text)}
           />
         )}
       </div>  {/* end ce-panel */}

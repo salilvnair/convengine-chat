@@ -130,6 +130,24 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       showDateSeparators:  config.showDateSeparators   ?? false,
       dateSeparatorFormat: config.dateSeparatorFormat  ?? 'auto',
       dateSeparatorShape:  config.dateSeparatorShape   ?? 'round',
+      // ── Landing chips ──────────────────────────────────────────────────
+      // landingChips: string[] | { chipText: string, chatText: string }[]
+      //   Suggestion chips shown below the landing avatar.
+      //   string[]  → chip label = sent message
+      //   object[]  → chipText shown, chatText sent
+      // landingChipsOrientation:   'row' | 'column'            (default 'row')
+      // landingChipsShape:         'round' | 'rect'            (default 'round')
+      // landingChipsAnchor:        'landingAgent' | 'chatbox'  (default 'landingAgent')
+      //   'landingAgent' → chips below the avatar/hero (classic)
+      //   'chatbox'      → chips pinned above the composer (ChatGPT style),
+      //                    column chips grow bottom → top
+      // landingChipsAnchorPadding: number | string  — gap in px between anchor
+      //                            and chips (default 8px via CSS var)
+      landingChips:               config.landingChips               ?? null,
+      landingChipsOrientation:    config.landingChipsOrientation    ?? 'row',
+      landingChipsShape:          config.landingChipsShape          ?? 'round',
+      landingChipsAnchor:         config.landingChipsAnchor         ?? 'landingAgent',
+      landingChipsAnchorPadding:  config.landingChipsAnchorPadding  ?? undefined,
     }),
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.

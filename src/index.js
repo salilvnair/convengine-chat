@@ -54,6 +54,7 @@ export { ChatComposer }       from './components/core/ChatComposer.jsx';
 export { ChatThread }         from './components/core/ChatThread.jsx';
 export { ChatHeader }         from './components/core/ChatHeader.jsx';
 export { ChatLanding }        from './components/core/ChatLanding.jsx';
+export { LandingChips }       from './components/core/LandingChips.jsx';
 export { ChatFeedbackRow }    from './components/core/ChatFeedbackRow.jsx';
 export { ChatTypingIndicator } from './components/core/ChatTypingIndicator.jsx';
 export { AuditPanel }         from './components/core/AuditPanel.jsx';

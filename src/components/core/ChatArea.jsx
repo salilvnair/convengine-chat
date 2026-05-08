@@ -54,6 +54,7 @@ export function ChatArea({
   auditOpen,
   onCloseAudit,
   engineStatus,
+  onChipClick,
 }) {
   const { config } = useConvEngineChatContext();
   const isFullscreen = variant === 'fullscreen';
@@ -72,6 +73,12 @@ export function ChatArea({
             subtitle={config.subtitle}
             showAvatar={config.showLandingAvatar}
             showSubtitle={config.showLandingSubtitle}
+            chips={config.landingChips}
+            chipsOrientation={config.landingChipsOrientation}
+            chipsShape={config.landingChipsShape}
+            chipsAnchor={config.landingChipsAnchor}
+            anchorPadding={config.landingChipsAnchorPadding}
+            onChipClick={onChipClick}
           />
           <footer className="ce-footer ce-footer--fullscreen">
             <ChatComposer
@@ -106,6 +113,12 @@ export function ChatArea({
         onKeyDown={onKeyDown}
         onSend={onSend}
         shape={config.composerShape}
+        chips={config.landingChips}
+        chipsOrientation={config.landingChipsOrientation}
+        chipsShape={config.landingChipsShape}
+        chipsAnchor={config.landingChipsAnchor}
+        anchorPadding={config.landingChipsAnchorPadding}
+        onChipClick={onChipClick}
       />
     );
   }

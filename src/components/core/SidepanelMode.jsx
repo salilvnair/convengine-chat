@@ -234,6 +234,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
             auditRevision={auditRevision}
             auditOpen={auditOpen}
             onCloseAudit={() => setAuditOpen(false)}
+            onChipClick={(text) => submitFromRenderer(text)}
           />
         </div>
       </>
