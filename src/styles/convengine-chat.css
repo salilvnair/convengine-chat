@@ -1,12 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* ═══════════════════════════════════════════════════════════════════════════
    convengine-chat.css — Complete design-system for the ConvEngine Chat library
    All styles are scoped inside .ce-chat-root to guarantee zero collision with
    the host application's stylesheets.
+   NO global resets — Tailwind @tailwind base/components/utilities directives
+   are intentionally omitted so the library never injects Preflight or
+   utility classes into the consumer application.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Scoped box-sizing reset — only affects elements inside the widget ────
+   Preflight's global `*, *::before, *::after { box-sizing: border-box }`
+   was the one reset the layout relies on; we re-apply it scoped here.
+   ─────────────────────────────────────────────────────────────────────────── */
+.ce-chat-root *,
+.ce-chat-root *::before,
+.ce-chat-root *::after {
+  box-sizing: border-box;
+}
 
 /* ── CSS custom properties (design tokens) ─────────────────────────────────
    Override any variable on .ce-chat-root to re-skin the chat without touching
