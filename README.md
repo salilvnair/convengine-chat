@@ -10,6 +10,7 @@
 
 ## Table of Contents
 
+- [⚠️ Breaking Changes (v1.0.8)](#breaking-changes-v108)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Modes](#modes)
@@ -24,6 +25,35 @@
 - [Actions API](#actions-api)
 - [Hooks](#hooks)
 - [Publishing to npm (Developer Guide)](#publishing-to-npm)
+
+---
+
+## ⚠️ Breaking Changes (v1.0.8)
+
+`config.messageEnrichment` was redesigned. If you were using it before v1.0.8, update as follows:
+
+| Before (≤ v1.0.7) | After (≥ v1.0.8) |
+|---|---|
+| `mode: 'none' \| 'text' \| 'json'` | **Removed.** No mode switch — every field below is independent and they combine freely. |
+| `postfix: string` | Renamed to `suffix: string` |
+| `props: object` (only read in `'json'` mode) | Renamed to `inputParams: object` — now always merged in, regardless of prefix/suffix |
+| `'json'` mode auto-injecting `{ prefix, userText, postfix, ...props }` into `inputParams` | **Removed.** `inputParams` now contains exactly what you put in it — no implicit `prefix`/`userText`/`postfix` keys |
+
+```diff
+  messageEnrichment: {
+-   mode: 'json',
+-   prefix: '/faq',
+-   postfix: '',
+-   props: { userId: 'xxxx' },
++   prefix: '/faq',
++   suffix: '',
++   inputParams: { userId: 'xxxx' },
+  },
+```
+
+`prefix`/`suffix` now always wrap the outgoing message text (previously only in `'text'` mode); `inputParams` is now always merged into the request (previously only in `'json'` mode). See [Message Enrichment](#message-enrichment) below for the full new shape, including the new `preHook`/`postHook` arrays.
+
+**Additive, non-breaking:** two new lifecycle callbacks, `onSubmit` and `onFeedback` — see [Callbacks](#callbacks).
 
 ---
 
@@ -180,6 +210,13 @@ const myRenderer = {
     // ── Lifecycle callbacks ───────────────────────────────────────────────
     onMessage:  (text) => console.log('user sent:', text),
     onResponse: (text) => console.log('AI replied:', text),
+    onSubmit:   ({ userText, apiText, inputParams }) => console.log('submitting:', apiText, inputParams),
+    onFeedback: (feedback) => console.log('feedback:', feedback),
+
+    // ── Message enrichment ──────────────────────────────────────────────
+    messageEnrichment: {
+      inputParams: { userId: 'xxxx' },  // attached to every message, composer included
+    },
 
     // ── Streaming (SSE / STOMP) ───────────────────────────────────────────
     stream: {
@@ -308,8 +345,40 @@ See [Color Theming](#color-theming) for full documentation.
 
 | Key | Type | Description |
 |---|---|---|
-| `onMessage` | `(text: string) => void` | Fired when the user sends a message. |
+| `onMessage` | `(text: string) => void` | Fired when the user sends a message (raw text, before enrichment). |
 | `onResponse` | `(text: string) => void` | Fired when an assistant response arrives. |
+| `onSubmit` | `({ userText, apiText, inputParams }) => void` | Fired right before every request — composer, `actions.submit`, and `actions.submitSilent` alike. Gives visibility into the fully-enriched payload, including for the plain-text composer flow (the default renderer doesn't otherwise expose `actions`). |
+| `onFeedback` | `({ conversationId, messageId, feedbackType, assistantResponse }) => void` | Fired right before 👍/👎 feedback is sent to the backend — same "before the request" timing as `onSubmit`. |
+
+### Message Enrichment
+
+Attach metadata or transform outgoing/incoming messages without writing a custom renderer. Every field is optional and independent — no `mode` switch.
+
+| Key | Type | Description |
+|---|---|---|
+| `prefix` | `string` | Prepended to the outgoing message text: `"{prefix} {userText} {suffix}"`. |
+| `suffix` | `string` | Appended to the outgoing message text. |
+| `inputParams` | `object` | Merged into every request's `inputParams`. A renderer's own `inputParams` (from `actions.submit`/`actions.submitSilent`) win on key collision. |
+| `preHook` | `function[]` | Run sequentially (awaited) before the request is sent. Each receives `{ userText, inputParams }` and may return a partial object to merge into the next hook / final request. |
+| `postHook` | `function[]` | Run sequentially (awaited) after the backend responds. Each receives `{ userText, inputParams, response }`. Side-effect only — return values are ignored. |
+
+```jsx
+<ConvEngineChat
+  config={{
+    messageEnrichment: {
+      inputParams: { userId: 'xxxx' },   // attached to every message, composer included
+      preHook: [
+        async (ctx) => ({ inputParams: { ...ctx.inputParams, ts: Date.now() } }),
+      ],
+      postHook: [
+        (ctx) => analytics.track('chat_message_sent', ctx),
+      ],
+    },
+  }}
+/>
+```
+
+Enrichment is invisible in the chat UI — the user bubble always shows the original typed/display text; it's only visible to the backend and the audit panel.
 
 ### Debug Flags
 

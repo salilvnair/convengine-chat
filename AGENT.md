@@ -288,15 +288,37 @@ Assistant message rendering uses a priority-sorted provider chain.
 
 ## Message enrichment
 
-Before a message is sent, `buildEnrichedPayload(userText, enrichment, existingParams)` transforms it based on `config.messageEnrichment`:
+> **⚠️ Breaking change in v1.0.8.** `config.messageEnrichment` was redesigned: `mode` ('none'|'text'|'json') is removed, `postfix`→`suffix`, `props`→`inputParams` (now always merged in, not gated behind `'json'` mode). See the [README Breaking Changes section](README.md#breaking-changes-v108) for the migration table.
 
-| mode | What reaches the backend | User bubble shows |
-|------|--------------------------|-------------------|
-| `"none"` (default) | Raw user text, `inputParams` as-is | Typed text |
-| `"text"` | `"{prefix} {userText} {postfix}"` as the message string | Original typed text |
-| `"json"` | `userText` unchanged; `inputParams` = `{ prefix, userText, postfix, ...props, ...rendererParams }` | Original typed text |
+Before a message is sent, `buildEnrichedPayload(userText, enrichment, existingParams)` transforms it based on `config.messageEnrichment`. There is no `mode` switch — every field is independently optional and they combine freely:
 
-In `"json"` mode, renderer-supplied `inputParams` take precedence over enrichment `props` on key collision. Enrichment is never shown in the chat UI — only visible to the backend and in the audit panel.
+```js
+messageEnrichment: {
+  prefix: '/faq',            // optional — prepended to outgoing text
+  suffix: 'thanks',          // optional — appended to outgoing text
+  inputParams: { userId },   // optional — merged into every request's inputParams
+  preHook:  [fn1, fn2],      // optional — run sequentially before send
+  postHook: [fn1, fn2],      // optional — run sequentially after the response arrives
+},
+```
+
+| Field | Effect |
+|---|---|
+| `prefix` / `suffix` | Wraps the outgoing message string: `"{prefix} {userText} {suffix}"`. The user bubble always shows the original typed/display text — wrapping is invisible in the UI. |
+| `inputParams` | Merged into every request's `inputParams` (`{ ...enrichment.inputParams, ...rendererParams }`). Renderer-supplied `inputParams` (from `actions.submit`/`actions.submitSilent`) win on key collision. Since `config` is read fresh on every send, a dynamic value here (e.g. driven by React state) updates on the very next message with no per-call plumbing. |
+| `preHook` | Array of `(ctx: { userText, inputParams }) => void \| Partial<ctx> \| Promise<...>`, run sequentially (awaited) right before the API call. A hook may return a partial object to shallow-merge into the context passed to the next hook / the final request. |
+| `postHook` | Array of `(ctx: { userText, inputParams, response }) => void \| Promise<void>`, run sequentially (awaited) after the backend responds. Side-effect only (analytics, logging) — return values are ignored. |
+
+Enrichment applies uniformly across all three send paths — the composer (`sendMessage`), `actions.submit` (`submitFromRenderer`), and `actions.submitSilent`.
+
+For visibility into every submit — including the plain-text composer flow, which the default renderer doesn't otherwise expose `actions` to — use `config.onSubmit`:
+
+```js
+onSubmit: ({ userText, apiText, inputParams }) => { /* ... */ },
+onFeedback: ({ conversationId, messageId, feedbackType, assistantResponse }) => { /* ... */ },
+```
+
+`onSubmit` fires right before every request (composer, renderer submit, and silent submit alike) with the fully-enriched payload. `onFeedback` fires on the same "before the request" timing, right before 👍/👎 feedback is sent to the backend.
 
 ---
 

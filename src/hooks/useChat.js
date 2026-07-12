@@ -34,35 +34,57 @@ function resolveStage(streamEvent) {
 /**
  * Applies messageEnrichment config before the text reaches the API.
  *
- * text mode → apiText = prefix + userText + postfix (sent as the message string)
- * json mode → apiText = userText (unchanged); enrichment fields are merged into
- *             inputParams so the backend receives { prefix, userText, postfix, ...props, ...rendererParams }
- *             Renderer-supplied inputParams take precedence over enrichment props on collision.
+ * - prefix/suffix (both optional) wrap userText into apiText: "{prefix} {userText} {suffix}".
+ *   Leave both unset to send the raw text unchanged.
+ * - inputParams (optional) is the enrichment base; a renderer's own inputParams
+ *   (existingParams) win on key collision.
+ * - preHook (optional array of functions) runs sequentially, each awaited before the next.
+ *   Each hook receives { userText, inputParams } (already prefix/suffix-wrapped and merged)
+ *   and may return a partial `{ userText?, inputParams? }` object to shallow-merge into the
+ *   context for the next hook / the final request. Returning nothing leaves it unchanged.
  *
  * The user bubble always shows the original userText — enrichment is invisible in the UI
  * and only visible to the backend (intent classifier, etc.) and the audit panel.
  *
  * @param {string} userText           - The raw text the user typed / renderer display text.
  * @param {object|null} enrichment    - config.messageEnrichment
- * @param {object} [existingParams]   - inputParams already supplied by a renderer (merged in json mode)
+ * @param {object} [existingParams]   - inputParams already supplied by a renderer
  */
-function buildEnrichedPayload(userText, enrichment, existingParams) {
-  if (!enrichment || !enrichment.mode || enrichment.mode === 'none') {
-    return { apiText: userText, inputParams: existingParams };
-  }
-  const { mode, prefix = '', postfix = '', props = {} } = enrichment;
-  if (mode === 'json') {
-    // enrichment props are the base; renderer's own inputParams override on collision
-    const merged = { prefix, userText, postfix, ...props, ...(existingParams ?? {}) };
-    return { apiText: userText, inputParams: merged };
-  }
-  // text mode — trim prefix/postfix and join with a single space so "/faq" + text = "/faq text"
-  const p = prefix.trim();
-  const s = postfix.trim();
-  return {
-    apiText: `${p ? p + ' ' : ''}${userText}${s ? ' ' + s : ''}`,
-    inputParams: existingParams,
+async function buildEnrichedPayload(userText, enrichment, existingParams) {
+  const prefix = (enrichment?.prefix ?? '').trim();
+  const suffix = (enrichment?.suffix ?? '').trim();
+  const apiText = prefix || suffix
+    ? `${prefix ? prefix + ' ' : ''}${userText}${suffix ? ' ' + suffix : ''}`
+    : userText;
+
+  let ctx = {
+    userText: apiText,
+    inputParams: { ...(enrichment?.inputParams ?? {}), ...(existingParams ?? {}) },
   };
+
+  const preHooks = Array.isArray(enrichment?.preHook) ? enrichment.preHook : [];
+  for (const hook of preHooks) {
+    if (typeof hook !== 'function') continue;
+    const result = await hook({ ...ctx });
+    if (result && typeof result === 'object') ctx = { ...ctx, ...result };
+  }
+
+  return { apiText: ctx.userText, inputParams: ctx.inputParams };
+}
+
+/**
+ * Runs config.messageEnrichment.postHook functions sequentially after the backend responds.
+ * Side-effect only (analytics, logging, syncing external state) — return values are ignored.
+ *
+ * @param {object|null} enrichment - config.messageEnrichment
+ * @param {{ userText: string, inputParams: object, response: unknown }} ctx
+ */
+async function runPostHooks(enrichment, ctx) {
+  const postHooks = Array.isArray(enrichment?.postHook) ? enrichment.postHook : [];
+  for (const hook of postHooks) {
+    if (typeof hook !== 'function') continue;
+    await hook({ ...ctx });
+  }
 }
 
 /**
@@ -219,7 +241,8 @@ export function useChat() {
       if (config.debugSimulateError) {
         throw new Error('Simulated error (debugSimulateError is enabled)');
       }
-      const { apiText, inputParams } = buildEnrichedPayload(userText, config.messageEnrichment, undefined);
+      const { apiText, inputParams } = await buildEnrichedPayload(userText, config.messageEnrichment, undefined);
+      config.onSubmit?.({ userText, apiText, inputParams });
       const res = await apiClient.sendMessage(conversationId, apiText, inputParams);
       const elapsed = Math.round(performance.now() - _t0);
       const assistantText = stringifyPayload(
@@ -239,6 +262,7 @@ export function useChat() {
       ]);
       setAuditRevision((v) => v + 1);
       config.onResponse?.(assistantText);
+      await runPostHooks(config.messageEnrichment, { userText: apiText, inputParams, response: res });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Request failed';
       setMessages((m) => [
@@ -288,11 +312,12 @@ export function useChat() {
         if (config.debugSimulateError) {
           throw new Error('Simulated error (debugSimulateError is enabled)');
         }
-        const { apiText, inputParams: enrichedParams } = buildEnrichedPayload(
+        const { apiText, inputParams: enrichedParams } = await buildEnrichedPayload(
           userText,
           config.messageEnrichment,
           inputParams,
         );
+        config.onSubmit?.({ userText, apiText, inputParams: enrichedParams });
         const res = await apiClient.sendMessage(
           conversationId,
           apiText,
@@ -315,6 +340,7 @@ export function useChat() {
         ]);
         setAuditRevision((v) => v + 1);
         config.onResponse?.(assistantText);
+        await runPostHooks(config.messageEnrichment, { userText: apiText, inputParams: enrichedParams, response: res });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Request failed';
         setMessages((m) => [
@@ -412,6 +438,13 @@ export function useChat() {
       );
       if (!target) return;
 
+      config.onFeedback?.({
+        conversationId,
+        messageId: target.id,
+        feedbackType,
+        assistantResponse: target.text,
+      });
+
       try {
         await apiClient.submitFeedback({
           conversationId,
@@ -438,7 +471,7 @@ export function useChat() {
         );
       }
     },
-    [conversationId, apiClient],
+    [conversationId, apiClient, config],
   );
 
   return {

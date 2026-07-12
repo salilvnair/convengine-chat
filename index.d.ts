@@ -63,16 +63,49 @@ export interface ConvEngineChatApiEndpoints {
 
 // ── Message enrichment ────────────────────────────────────────────────────────
 
+/** Payload passed to each `messageEnrichment.preHook` function. */
+export interface MessageEnrichmentHookContext {
+  /** Outgoing message text — already wrapped with prefix/suffix. */
+  userText: string;
+  /** Outgoing inputParams — already merged with `messageEnrichment.inputParams`. */
+  inputParams: Record<string, unknown>;
+}
+
+/**
+ * Runs before the request is sent. Hooks run sequentially (awaited) in array order.
+ * Return a partial `{ userText?, inputParams? }` to shallow-merge into the context
+ * passed to the next hook / the final request. Return nothing to leave it unchanged.
+ */
+export type MessageEnrichmentPreHook = (
+  ctx: MessageEnrichmentHookContext,
+) => void | Partial<MessageEnrichmentHookContext> | Promise<void | Partial<MessageEnrichmentHookContext>>;
+
+/** Payload passed to each `messageEnrichment.postHook` function. */
+export interface MessageEnrichmentPostHookContext extends MessageEnrichmentHookContext {
+  /** Raw backend response for this message. */
+  response: unknown;
+}
+
+/**
+ * Runs after the backend responds. Hooks run sequentially (awaited) in array order.
+ * Side-effect only (analytics, logging, syncing external state) — return values are ignored.
+ */
+export type MessageEnrichmentPostHook = (
+  ctx: MessageEnrichmentPostHookContext,
+) => void | Promise<void>;
+
 export interface ConvEngineChatMessageEnrichment {
-  /**
-   * - `'none'` — no enrichment (default)
-   * - `'text'` — wraps with prefix/postfix as a plain string
-   * - `'json'` — sends structured `inputParams` to the backend; user bubble unchanged
-   */
-  mode?: 'none' | 'text' | 'json';
+  /** Prepended to the outgoing message text, e.g. `'/faq'`. Optional. */
   prefix?: string;
-  postfix?: string;
-  props?: Record<string, unknown>;
+  /** Appended to the outgoing message text. Optional. */
+  suffix?: string;
+  /** Merged into every request's `inputParams`. A renderer's own `inputParams`
+   *  (from `actions.submit`/`actions.submitSilent`) win on key collision. */
+  inputParams?: Record<string, unknown>;
+  /** Functions run sequentially before the request is sent. */
+  preHook?: MessageEnrichmentPreHook[];
+  /** Functions run sequentially after the backend responds. */
+  postHook?: MessageEnrichmentPostHook[];
 }
 
 // ── Stream config ─────────────────────────────────────────────────────────────
@@ -158,10 +191,23 @@ export interface ConvEngineChatConfig {
   renderers?: RendererDefinition[];
 
   // ── Lifecycle callbacks ────────────────────────────────────────────────────
-  /** Fired when the user sends a message. */
+  /** Fired when the user sends a message (raw text, before enrichment). */
   onMessage?: (text: string) => void;
   /** Fired when an assistant response arrives. */
   onResponse?: (text: string) => void;
+  /** Fired right before every request is sent — composer, renderer `actions.submit`,
+   *  and `actions.submitSilent` all go through this, including the built-in default
+   *  renderer flow. Gives visibility into the fully-enriched payload (`apiText`/`inputParams`)
+   *  that isn't otherwise available outside a custom renderer. */
+  onSubmit?: (payload: { userText: string; apiText: string; inputParams: Record<string, unknown> }) => void;
+  /** Fired right before 👍/👎 feedback is sent to the backend — same "before the
+   *  request" timing as `onSubmit`. */
+  onFeedback?: (feedback: {
+    conversationId: string;
+    messageId: string;
+    feedbackType: string;
+    assistantResponse: string;
+  }) => void;
 
   // ── Debug flags — all default false, zero cost when off ───────────────────
   /** Always show the "Agent is thinking…" typing indicator — no message needed.
@@ -244,7 +290,8 @@ export interface ConvEngineChatConfig {
   dateLabelBorderColor?: string | { light?: string; dark?: string };
 
   // ── Advanced ───────────────────────────────────────────────────────────────
-  /** Message enrichment — prefix/postfix/wrap sent messages. */
+  /** Message enrichment — wrap outgoing text with prefix/suffix, attach static
+   *  inputParams (e.g. `{ userId }`) to every request, and/or run pre/post hooks. */
   messageEnrichment?: ConvEngineChatMessageEnrichment;
   /** Streaming configuration (SSE or STOMP). */
   stream?: ConvEngineStreamConfig;

@@ -67,6 +67,8 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       rendererProviders: Array.isArray(config.renderers) ? config.renderers : [],
       onMessage:  config.onMessage  ?? null,
       onResponse: config.onResponse ?? null,
+      onSubmit:   config.onSubmit   ?? null,
+      onFeedback: config.onFeedback ?? null,
       // ── Consumer icon overrides ────────────────────────────────────────
       icons: config.icons ?? {},
       // ── Color overrides (shorthand; applied as CSS vars on root) ──────
@@ -80,11 +82,11 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       composerShape:   config.composerShape   ?? 'round',
       // ── Message enrichment ─────────────────────────────────────────────
       // messageEnrichment: {
-      //   mode: 'text' | 'json',   // 'text' wraps with prefix/postfix string;
-      //                            // 'json' sends structured inputParams
-      //   prefix:  string,
-      //   postfix: string,
-      //   props:   object,         // json mode only — merged into inputParams
+      //   prefix:      string,     // optional — wraps outgoing text: "{prefix} {text} {suffix}"
+      //   suffix:      string,     // optional
+      //   inputParams: object,     // optional — merged into every request's inputParams
+      //   preHook:     function[], // optional — run sequentially before send, may transform payload
+      //   postHook:    function[], // optional — run sequentially after the response arrives
       // }
       messageEnrichment: config.messageEnrichment ?? null,
       // ── Streaming ────────────────────────────────────────────
