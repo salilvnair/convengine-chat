@@ -21,6 +21,7 @@ export function ChatLanding({
   onSend,
   placeholder,
   shape,
+  reply = null,
   // Landing chips
   chips,
   chipsOrientation,
@@ -66,6 +67,7 @@ export function ChatLanding({
       onSend={onSend}
       placeholder={placeholder}
       shape={shape}
+      reply={reply}
     />
   ) : null;
 

@@ -51,6 +51,11 @@ function isSolidColorToken(value) {
  * @param {"right"|"left"} [props.align="right"]
  *   Horizontal anchor for panel mode.
  *
+ * @param {"xs"|"sm"|"md"|"lg"} [props.size="md"]
+ *   Overall scale of the widget — panel dimensions, font, bubbles, composer,
+ *   avatars and the send button all shrink/grow together. `md` is the default
+ *   (unchanged look); `sm`/`xs` are neat/compact; `lg` is roomier.
+ *
  * @param {object} [props.config={}]
  *   Configuration bag:
  *   {
@@ -89,6 +94,7 @@ export function ConvEngineChat({
   mode = 'panel',
   position = 'bottom',
   align = 'right',
+  size = 'md',
   config = {},
   theme = {},
   onModeChange,
@@ -167,6 +173,7 @@ export function ConvEngineChat({
       <div
         className={rootClass}
         data-ce-theme={isDark ? 'dark' : 'light'}
+        data-ce-size={size && size !== 'md' ? size : undefined}
         style={Object.keys(rootStyle).length ? rootStyle : undefined}
       >
         {mode === 'fullscreen' ? (

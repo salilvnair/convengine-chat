@@ -264,6 +264,17 @@ export function RestoreIcon(props) {
   );
 }
 
+/** Reply — curved arrow (reply-to-message, Reply style) */
+export function ReplyIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h11a5 5 0 0 1 5 5v3" />
+    </svg>
+  );
+}
+
 /** Layout/View — used for the chat mode picker button */
 export function LayoutIcon(props) {
   return (

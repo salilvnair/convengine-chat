@@ -46,7 +46,7 @@ export {
   AuditIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon,
   MaximizeIcon, RestoreIcon, LayoutIcon, NewChatIcon,
   PanelLeftIcon, PanelRightIcon,
-  PopoutIcon, RestoreFromMinIcon,
+  PopoutIcon, RestoreFromMinIcon, ReplyIcon,
 } from './icons/Icons.jsx';
 
 // ── Primitive UI components (for custom layouts) ────────────────────────────

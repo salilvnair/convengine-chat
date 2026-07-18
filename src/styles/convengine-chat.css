@@ -94,6 +94,30 @@
   --ce-font-size-sm:         12px;
   --ce-line-height:          1.55;
 
+  /* ── Size-scalable tokens (the `size` prop overrides these; md = default) ──
+     Every dimension the `size` prop shrinks/grows is a token so a single
+     [data-ce-size="…"] block can rescale the whole widget — same idea as the
+     `theme` prop, applied to spacing instead of color. */
+  --ce-bubble-py:            8px;
+  --ce-bubble-px:            13px;
+  --ce-thread-pt:            20px;
+  --ce-thread-px:            18px;
+  --ce-thread-pb:            12px;
+  --ce-thread-gap:           16px;
+  --ce-composer-min-h:       46px;
+  --ce-composer-radius:      30px;
+  --ce-composer-pad-y:       10px;
+  --ce-composer-pad-r:       52px;
+  --ce-composer-pad-l:       14px;
+  --ce-send-size:            34px;
+  --ce-send-icon:            16px;
+  --ce-header-min-h:         56px;
+  --ce-header-py:            12px;
+  --ce-header-px:            16px;
+
+  /* Reply/context pill accent (overridable per pill via inline --ce-reply-accent) */
+  --ce-reply-accent:         var(--ce-color-accent);
+
   /* Motion */
   --ce-transition-fast:      150ms cubic-bezier(0.4, 0, 0.2, 1);
   --ce-transition-med:       250ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -514,11 +538,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: var(--ce-header-py) var(--ce-header-px);
   background: var(--ce-bg-header);
   border-bottom: 1px solid var(--ce-border-color);
   flex-shrink: 0;
-  min-height: 56px;
+  min-height: var(--ce-header-min-h);
 }
 
 .ce-chat-root .ce-header-brand {
@@ -674,10 +698,10 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px 18px 12px;
+  padding: var(--ce-thread-pt) var(--ce-thread-px) var(--ce-thread-pb);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--ce-thread-gap);
   scroll-behavior: smooth;
 }
 
@@ -805,7 +829,7 @@
 }
 
 .ce-chat-root .ce-bubble {
-  padding: 8px 13px;
+  padding: var(--ce-bubble-py) var(--ce-bubble-px);
   white-space: pre-wrap;
   line-height: 1.5;
   width: fit-content;
@@ -863,6 +887,48 @@
 .ce-chat-root .ce-error-prefix {
   margin-right: 6px;
   opacity: 0.8;
+}
+
+/* ── Reply-to-message affordance (Reply-style) ─────────────────────────────
+   A small reply icon that fades in on hover, just outside the assistant bubble.
+   Click → quotes this bubble in the composer (config.showBubbleReply). */
+.ce-chat-root .ce-message--assistant .ce-message-content { position: relative; }
+.ce-chat-root .ce-bubble-reply-btn {
+  position: absolute;
+  top: 50%;
+  right: -26px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--ce-border-color);
+  background: var(--ce-bg-panel);
+  color: var(--ce-icon-color);
+  cursor: pointer;
+  opacity: 0;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  transition: opacity var(--ce-transition-fast), color var(--ce-transition-fast),
+    border-color var(--ce-transition-fast), background var(--ce-transition-fast);
+}
+.ce-chat-root .ce-bubble-reply-btn svg { width: 13px; height: 13px; }
+.ce-chat-root .ce-message--assistant:hover .ce-bubble-reply-btn,
+.ce-chat-root .ce-bubble-reply-btn:focus-visible { opacity: 1; }
+.ce-chat-root .ce-bubble-reply-btn:hover {
+  color: var(--ce-color-accent);
+  border-color: var(--ce-color-accent);
+  background: var(--ce-color-accent-light);
+}
+/* Wide / bubble-less (custom renderer) messages span the row — tuck the reply
+   icon into the top-right corner instead of hanging off the (full-width) edge. */
+.ce-chat-root .ce-message--wide .ce-bubble-reply-btn,
+.ce-chat-root .ce-message-content--raw .ce-bubble-reply-btn {
+  top: 4px;
+  right: 4px;
+  transform: none;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -994,9 +1060,9 @@
   align-items: center;
   background: var(--ce-bg-composer);
   border: 1.5px solid var(--ce-border-color);
-  border-radius: 30px;
-  padding: 10px 52px 10px 14px;
-  min-height: 46px;
+  border-radius: var(--ce-composer-radius);
+  padding: var(--ce-composer-pad-y) var(--ce-composer-pad-r) var(--ce-composer-pad-y) var(--ce-composer-pad-l);
+  min-height: var(--ce-composer-min-h);
   position: relative;
   transition: border-color var(--ce-transition-fast), box-shadow var(--ce-transition-fast);
   width: 100%;
@@ -1041,8 +1107,8 @@
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
+  width: var(--ce-send-size);
+  height: var(--ce-send-size);
   border-radius: 999px;
   border: none;
   background: var(--ce-color-accent);
@@ -1056,7 +1122,7 @@
     opacity var(--ce-transition-fast);
 }
 
-.ce-chat-root .ce-composer-send svg { width: 16px; height: 16px; }
+.ce-chat-root .ce-composer-send svg { width: var(--ce-send-icon); height: var(--ce-send-icon); }
 .ce-chat-root .ce-composer-send:hover:not(:disabled) {
   background: var(--ce-color-accent-hover);
   transform: translateY(-50%) scale(1.06);
@@ -1088,6 +1154,172 @@
 
 .ce-chat-root .ce-composer--multiline .ce-composer-send:disabled {
   transform: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COMPOSER REPLY / CONTEXT PILL — a first-class "reply-to" preview pinned
+   inside the composer, above the textarea (Reply-style). Driven by the
+   `config.replyContext` prop or the imperative actions.setReplyContext().
+   ══════════════════════════════════════════════════════════════════════════ */
+/* When a reply pill is present the composer stacks: pill on top, input below,
+   and the send button anchors to the bottom-right (like the multiline case). */
+.ce-chat-root .ce-composer--has-reply {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ce-chat-root .ce-composer--has-reply .ce-composer-send { top: auto; bottom: 8px; transform: none; }
+.ce-chat-root .ce-composer--has-reply .ce-composer-send:hover:not(:disabled) { transform: scale(1.06); }
+.ce-chat-root .ce-composer--has-reply .ce-composer-send:disabled { transform: none; }
+
+.ce-chat-root .ce-composer-reply {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  margin-bottom: 8px;
+  background: color-mix(in srgb, var(--ce-reply-accent) 12%, transparent);
+  border-radius: 9px;
+  overflow: hidden;
+  animation: ce-msg-in var(--ce-transition-fast) both;
+}
+.ce-chat-root .ce-composer-reply-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  padding: 6px 4px 6px 0;
+  cursor: default;
+  color: inherit;
+}
+.ce-chat-root .ce-composer-reply-main[data-clickable="1"] { cursor: pointer; }
+.ce-chat-root .ce-composer-reply-bar {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 3px;
+  background: var(--ce-reply-accent);
+  flex-shrink: 0;
+}
+.ce-chat-root .ce-composer-reply-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.ce-chat-root .ce-composer-reply-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ce-reply-accent);
+}
+.ce-chat-root .ce-composer-reply-quote {
+  font-size: var(--ce-font-size-sm);
+  font-weight: 600;
+  color: var(--ce-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ce-chat-root .ce-composer-reply-main[data-clickable="1"]:hover .ce-composer-reply-quote {
+  text-decoration: underline;
+}
+.ce-chat-root .ce-composer-reply-x {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ce-text-secondary);
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+}
+.ce-chat-root .ce-composer-reply-x:hover { color: var(--ce-text-primary); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SIZE VARIANTS — the `size` prop (xs | sm | md | lg) sets data-ce-size on the
+   root and rescales every scalable token. md = the default token values above,
+   so an unset / md widget is byte-identical to before this feature.
+   ══════════════════════════════════════════════════════════════════════════ */
+.ce-chat-root[data-ce-size="xs"] {
+  --ce-panel-width: 340px;
+  --ce-panel-height: 520px;
+  --ce-panel-min-height: 300px;
+  --ce-fab-size: 44px;
+  --ce-avatar-size: 24px;
+  --ce-font-size-base: 12px;
+  --ce-font-size-sm: 10.5px;
+  --ce-bubble-py: 5px;
+  --ce-bubble-px: 9px;
+  --ce-thread-pt: 12px;
+  --ce-thread-px: 11px;
+  --ce-thread-pb: 8px;
+  --ce-thread-gap: 10px;
+  --ce-composer-min-h: 36px;
+  --ce-composer-radius: 18px;
+  --ce-composer-pad-y: 6px;
+  --ce-composer-pad-r: 40px;
+  --ce-composer-pad-l: 11px;
+  --ce-send-size: 26px;
+  --ce-send-icon: 13px;
+  --ce-header-min-h: 42px;
+  --ce-header-py: 8px;
+  --ce-header-px: 12px;
+}
+.ce-chat-root[data-ce-size="sm"] {
+  --ce-panel-width: 384px;
+  --ce-panel-height: 600px;
+  --ce-panel-min-height: 340px;
+  --ce-fab-size: 48px;
+  --ce-avatar-size: 28px;
+  --ce-font-size-base: 13px;
+  --ce-font-size-sm: 11px;
+  --ce-bubble-py: 6px;
+  --ce-bubble-px: 11px;
+  --ce-thread-pt: 14px;
+  --ce-thread-px: 13px;
+  --ce-thread-pb: 9px;
+  --ce-thread-gap: 12px;
+  --ce-composer-min-h: 40px;
+  --ce-composer-radius: 22px;
+  --ce-composer-pad-y: 7px;
+  --ce-composer-pad-r: 44px;
+  --ce-composer-pad-l: 12px;
+  --ce-send-size: 28px;
+  --ce-send-icon: 14px;
+  --ce-header-min-h: 48px;
+  --ce-header-py: 9px;
+  --ce-header-px: 14px;
+}
+/* lg — a touch roomier than md for consumers who want it "in their mouth". */
+.ce-chat-root[data-ce-size="lg"] {
+  --ce-panel-width: 520px;
+  --ce-panel-height: 820px;
+  --ce-fab-size: 58px;
+  --ce-avatar-size: 38px;
+  --ce-font-size-base: 15px;
+  --ce-font-size-sm: 13px;
+  --ce-bubble-py: 10px;
+  --ce-bubble-px: 15px;
+  --ce-thread-pt: 24px;
+  --ce-thread-px: 22px;
+  --ce-thread-pb: 14px;
+  --ce-thread-gap: 18px;
+  --ce-composer-min-h: 52px;
+  --ce-composer-radius: 30px;
+  --ce-composer-pad-y: 12px;
+  --ce-composer-pad-r: 58px;
+  --ce-composer-pad-l: 16px;
+  --ce-send-size: 38px;
+  --ce-send-icon: 18px;
+  --ce-header-min-h: 62px;
+  --ce-header-py: 14px;
+  --ce-header-px: 18px;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

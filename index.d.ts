@@ -94,6 +94,38 @@ export type MessageEnrichmentPostHook = (
   ctx: MessageEnrichmentPostHookContext,
 ) => void | Promise<void>;
 
+/**
+ * A "reply-to" / context pill pinned inside the composer (Reply-style).
+ * Drive it declaratively via `config.replyContext` (reactive) or imperatively
+ * via `actions.setReplyContext()` / `actions.clearReplyContext()`.
+ */
+export interface ConvEngineChatReplyContext {
+  /** The quoted text shown in the pill (e.g. a node name or a message snippet). */
+  text: string;
+  /** The full text sent to the backend as `inputParams.replySourceText` on the
+   *  next send. Defaults to `text` when omitted (used when `text` is truncated
+   *  for display but you want the backend to see the whole thing). */
+  replySourceText?: string;
+  /** Small uppercase label above the quote, e.g. `'Replying to'`. */
+  label?: string;
+  /** Accent color for the pill's bar + label. Defaults to the widget accent. */
+  accent?: string;
+  /** Extra fields folded into `inputParams` on the next send (alongside
+   *  `replySourceText`) — grounds the question. */
+  meta?: Record<string, unknown>;
+  /** Keep the pill after a send instead of clearing it (Reply clears by
+   *  default). Use for a long-lived "current context" pin. @default false */
+  persist?: boolean;
+  /** If set, the pill becomes a link (e.g. jump to the referenced thing). */
+  onClick?: () => void;
+  /** Called when the ✕ is clicked (in addition to dropping the pill). */
+  onClear?: () => void;
+  /** Show the ✕ dismiss button. @default true */
+  clearable?: boolean;
+  /** Tooltip for the pill body. */
+  title?: string;
+}
+
 export interface ConvEngineChatMessageEnrichment {
   /** Prepended to the outgoing message text, e.g. `'/faq'`. Optional. */
   prefix?: string;
@@ -129,6 +161,9 @@ export interface ConvEngineChatConfig {
   conversationId?: string;
   /** Override individual endpoint paths. Unspecified endpoints keep their defaults. */
   apiEndpoints?: ConvEngineChatApiEndpoints;
+  /** A reply/context pill pinned in the composer. Reactive — update it (or set
+   *  it to `null`) as your app's "current context" changes. */
+  replyContext?: ConvEngineChatReplyContext | null;
 
   // ── Text & Labels ──────────────────────────────────────────────────────────
   /** Header title and landing screen heading. @default 'ConvEngine Assistant' */
@@ -145,6 +180,10 @@ export interface ConvEngineChatConfig {
   showAudit?: boolean;
   /** Engine status / progress indicator. @default true */
   showEngineStatus?: boolean;
+  /** Reply-to-message icon on assistant bubbles (hover). Clicking it quotes the
+   *  bubble in the composer and sends its text as `inputParams.replySourceText`.
+   *  @default true */
+  showBubbleReply?: boolean;
   /** 🌙/☀️ toggle in header. @default false */
   showDarkModeLightMode?: boolean;
   /** Pulsing dot next to header title. @default true */
@@ -312,6 +351,10 @@ export interface ConvEngineChatProps {
   position?: 'bottom' | 'top';
   /** Horizontal FAB anchor / sidepanel side. @default 'right' */
   align?: 'right' | 'left';
+  /** Overall widget scale — panel dimensions, font, bubbles, composer, avatars
+   *  and the send button scale together. `md` is unchanged; `sm`/`xs` are
+   *  compact; `lg` is roomier. @default 'md' */
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   /** Runtime configuration. */
   config?: ConvEngineChatConfig;
   /** CSS custom-property overrides, auto-prefixed with `--ce-`.
@@ -319,6 +362,8 @@ export interface ConvEngineChatProps {
   theme?: Record<string, string>;
   /** Called with the new mode string when the user switches mode from the header picker. */
   onModeChange?: (mode: 'panel' | 'sidepanel' | 'fullscreen') => void;
+  /** A ref that receives the imperative actions handle while mounted. */
+  actionsRef?: React.MutableRefObject<ConvEngineChatActionsHandle | null> | null;
 }
 
 export declare function ConvEngineChat(props: ConvEngineChatProps): React.ReactElement | null;
@@ -364,10 +409,26 @@ export interface ChatActions {
    * Focuses the input automatically.
    */
   prefillInput: (text: string) => void;
+  /** Pin a reply/context pill in the composer (imperative equivalent of
+   *  `config.replyContext`). */
+  setReplyContext: (ctx: ConvEngineChatReplyContext | null) => void;
+  /** Remove the reply/context pill. */
+  clearReplyContext: () => void;
 }
 
 export interface ChatActionsContextValue {
   actions: ChatActions;
+}
+
+/** The imperative handle exposed on `actionsRef.current` while the widget is mounted. */
+export interface ConvEngineChatActionsHandle {
+  submit: (displayText: string, inputParams?: Record<string, unknown>) => void;
+  submitSilent: (inputParams?: Record<string, unknown>) => void;
+  appendBubble: (text: string, role?: 'user' | 'assistant') => void;
+  prefillInput: (text: string) => void;
+  setReplyContext: (ctx: ConvEngineChatReplyContext | null) => void;
+  clearReplyContext: () => void;
+  reset: () => void;
 }
 
 export declare function useChatActions(): ChatActionsContextValue;
@@ -400,6 +461,8 @@ export interface UseChatReturn {
   auditRevision: number;
   isInitial: boolean;
   isMultiLine: boolean;
+  /** The active reply/context pill, or `null`. */
+  replyContext: ConvEngineChatReplyContext | null;
   // Refs
   threadRef: React.RefObject<HTMLElement>;
   inputRef: React.RefObject<HTMLInputElement>;
@@ -413,6 +476,10 @@ export interface UseChatReturn {
   appendBubble: (text: string, role?: 'user' | 'assistant') => void;
   /** Pre-populate the composer input without sending. */
   prefillInput: (text: string) => void;
+  /** Pin a reply/context pill in the composer. */
+  setReplyContext: (ctx: ConvEngineChatReplyContext | null) => void;
+  /** Remove the reply/context pill. */
+  clearReplyContext: () => void;
   /** Clear all conversation state. */
   resetChat: () => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -454,6 +521,7 @@ export type ConvEngineChatIconMap = {
   PopoutIcon:           React.ComponentType<React.SVGProps<SVGSVGElement>>;
   RestoreFromMinIcon:   React.ComponentType<React.SVGProps<SVGSVGElement>>;
   LandingAvatarIcon:    React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  ReplyIcon:            React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
 /** Returns merged icon map: library defaults overridden by `config.icons`. */

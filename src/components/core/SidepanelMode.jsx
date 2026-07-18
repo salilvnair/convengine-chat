@@ -51,6 +51,8 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     submitSilent,
     appendBubble,
     prefillInput,
+    setReplyContext,
+    clearReplyContext,
     resetChat,
     handleKeyDown,
     submitFeedback,
@@ -60,7 +62,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
   // Expose chat actions to external consumers via actionsRef
   useEffect(() => {
     if (!actionsRef) return;
-    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, reset: resetChat };
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, reset: resetChat };
     return () => { if (actionsRef) actionsRef.current = null; };
   });
 
@@ -71,9 +73,11 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
         submitSilent,
         appendBubble,
         prefillInput,
+        setReplyContext,
+        clearReplyContext,
       },
     }),
-    [submitFromRenderer, submitSilent, appendBubble, prefillInput],
+    [submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext],
   );
 
   // ── New chat with confirmation ────────────────────────────────────────────

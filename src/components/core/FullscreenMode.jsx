@@ -71,6 +71,8 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
     submitSilent,
     appendBubble,
     prefillInput,
+    setReplyContext,
+    clearReplyContext,
     resetChat,
     handleKeyDown,
     submitFeedback,
@@ -79,7 +81,7 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
   // Expose chat actions to external consumers via actionsRef
   useEffect(() => {
     if (!actionsRef) return;
-    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, reset: resetChat };
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, reset: resetChat };
     return () => { if (actionsRef) actionsRef.current = null; };
   });
 
@@ -90,9 +92,11 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
         submitSilent,
         appendBubble,
         prefillInput,
+        setReplyContext,
+        clearReplyContext,
       },
     }),
-    [submitFromRenderer, submitSilent, appendBubble, prefillInput],
+    [submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext],
   );
 
   const handleNewChat = () => {

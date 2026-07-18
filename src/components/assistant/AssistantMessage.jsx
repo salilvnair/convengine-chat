@@ -18,6 +18,27 @@ function fmtTime(ts) {
 }
 
 /**
+ * Human-readable text for a reply quote. Assistant text is sometimes a
+ * structured (JSON) renderer payload — pull a natural-language field out of it
+ * so the quote reads like a sentence instead of raw JSON.
+ */
+function readableBubbleText(raw) {
+  if (typeof raw !== 'string') return '';
+  const t = raw.trim();
+  if (!t) return '';
+  if (t[0] === '{' || t[0] === '[') {
+    try {
+      const obj = JSON.parse(t);
+      const pick = obj && typeof obj === 'object' && !Array.isArray(obj)
+        ? (obj.text ?? obj.answer ?? obj.message ?? obj.summary ?? obj.headline ?? obj.value)
+        : null;
+      if (typeof pick === 'string' && pick.trim()) return pick.trim();
+    } catch { /* not JSON — quote the raw text */ }
+  }
+  return t;
+}
+
+/**
  * Renders a single assistant message bubble (left-aligned).
  *
  * - Resolves the appropriate renderer from the registry (supports custom renderers
@@ -28,9 +49,35 @@ function fmtTime(ts) {
 export function AssistantMessage({ bubble }) {
   const { config } = useConvEngineChatContext();
   const { actions } = useChatActions();
-  const { AgentIcon } = useIcons();
+  const { AgentIcon, ReplyIcon } = useIcons();
 
   const isError = isAssistantErrorBubble(bubble);
+
+  // ── Reply-to-this-message (Reply-style) ──────────────────────────────
+  const canReply = config.showBubbleReply !== false && !isError
+    && typeof actions.setReplyContext === 'function';
+  const onReply = () => {
+    const full = readableBubbleText(bubble.text);
+    if (!full) return;
+    const oneLine = full.replace(/\s+/g, ' ').trim();
+    actions.setReplyContext({
+      label: 'Replying to',
+      text: oneLine.length > 90 ? `${oneLine.slice(0, 88)}…` : oneLine,
+      replySourceText: full.slice(0, 2000),   // → inputParams.replySourceText on send
+      // persist omitted → cleared after the next send (Reply behavior)
+    });
+  };
+  const replyBtn = canReply ? (
+    <button
+      type="button"
+      className="ce-bubble-reply-btn"
+      onClick={onReply}
+      title="Reply to this message"
+      aria-label="Reply to this message"
+    >
+      <ReplyIcon />
+    </button>
+  ) : null;
   const resolved = !isError
     ? resolveAssistantRenderer(bubble.text, config.rendererProviders)
     : null;
@@ -99,6 +146,7 @@ export function AssistantMessage({ bubble }) {
               actions={actions}
               onSubmit={actions.submit}
             />
+            {replyBtn}
             {hasDebug && <>{debugChips}{debugPayload}</>}
           </div>
         </div>
@@ -149,6 +197,7 @@ export function AssistantMessage({ bubble }) {
                 </pre>
               )}
             </div>
+            {replyBtn}
             {hasDebug && <>{debugChips}{debugPayload}</>}
           </div>
         </div>

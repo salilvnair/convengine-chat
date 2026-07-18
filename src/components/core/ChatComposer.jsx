@@ -19,6 +19,7 @@ export function ChatComposer({
   centered = false,
   fullscreen = false,
   shape = 'round',
+  reply = null,
 }) {
   const { SendIcon } = useIcons();
   // Auto-resize textarea
@@ -39,12 +40,46 @@ export function ChatComposer({
     isMultiLine ? 'ce-composer--multiline'   : '',
     fullscreen  ? 'ce-composer--fullscreen'  : '',
     shape === 'rect' ? 'ce-composer--rect' : '',
+    reply ? 'ce-composer--has-reply' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
+  const replyClickable = reply && typeof reply.onClick === 'function';
+
   return (
     <div className={composerClass}>
+      {reply && (
+        <div
+          className="ce-composer-reply"
+          style={reply.accent ? { '--ce-reply-accent': reply.accent } : undefined}
+        >
+          <button
+            type="button"
+            className="ce-composer-reply-main"
+            data-clickable={replyClickable ? '1' : undefined}
+            onClick={replyClickable ? reply.onClick : undefined}
+            title={reply.title ?? (replyClickable ? 'Open' : undefined)}
+          >
+            <span className="ce-composer-reply-bar" />
+            <span className="ce-composer-reply-text">
+              {reply.label && <span className="ce-composer-reply-label">{reply.label}</span>}
+              <span className="ce-composer-reply-quote">{reply.text}</span>
+            </span>
+          </button>
+          {reply.clearable !== false && (
+            <button
+              type="button"
+              className="ce-composer-reply-x"
+              onClick={reply.onClear}
+              title="Remove context"
+              aria-label="Remove context"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
       <textarea
         ref={inputRef}
         className="ce-composer-input"

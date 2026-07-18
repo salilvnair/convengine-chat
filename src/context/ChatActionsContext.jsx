@@ -19,12 +19,18 @@ import { createContext, useContext } from 'react';
  * actions.prefillInput(text)
  *   Pre-populate the composer input so the user can review/edit before
  *   manually sending. Focuses the input automatically.
+ *
+ * actions.setReplyContext(ctx) / actions.clearReplyContext()
+ *   Pin / remove a reply-to context pill in the composer. `ctx` is
+ *   { text, label?, accent?, meta?, onClick?, onClear?, clearable? }.
  */
 const defaultActions = {
-  submit:       (_displayText, _inputParams) => {},
-  submitSilent: (_inputParams) => {},
-  appendBubble: (_text, _role) => {},
-  prefillInput: (_text) => {},
+  submit:            (_displayText, _inputParams) => {},
+  submitSilent:      (_inputParams) => {},
+  appendBubble:      (_text, _role) => {},
+  prefillInput:      (_text) => {},
+  setReplyContext:   (_ctx) => {},
+  clearReplyContext: () => {},
 };
 
 export const ChatActionsContext = createContext({ actions: defaultActions });

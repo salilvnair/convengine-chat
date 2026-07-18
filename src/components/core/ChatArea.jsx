@@ -56,10 +56,17 @@ export function ChatArea({
   engineStatus,
   onChipClick,
 }) {
-  const { config } = useConvEngineChatContext();
+  const { config, chatState } = useConvEngineChatContext();
   const isFullscreen = variant === 'fullscreen';
   const isSidepanel  = variant === 'sidepanel';
   const showStatusBar = (isFullscreen || isSidepanel) && config.showEngineStatus !== false;
+
+  // Reply / context pill — lives in provider state (survives mode switches).
+  // The ✕ fires the consumer's onClear AND drops the pill locally.
+  const rc = chatState?.replyContext ?? null;
+  const reply = rc
+    ? { ...rc, onClear: () => { rc.onClear?.(); chatState.clearReplyContext?.(); } }
+    : null;
 
   if (isInitial) {
     // Fullscreen: title stays centered, composer always lives in the bottom footer
@@ -92,6 +99,7 @@ export function ChatArea({
               onSend={onSend}
               placeholder={config.placeholder}
               shape={config.composerShape}
+              reply={reply}
             />
           </footer>
         </div>
@@ -113,6 +121,7 @@ export function ChatArea({
         onKeyDown={onKeyDown}
         onSend={onSend}
         shape={config.composerShape}
+        reply={reply}
         chips={config.landingChips}
         chipsOrientation={config.landingChipsOrientation}
         chipsShape={config.landingChipsShape}
@@ -152,6 +161,7 @@ export function ChatArea({
           placeholder={config.placeholder}
           fullscreen={isFullscreen}
           shape={config.composerShape}
+          reply={reply}
         />
       </footer>
     </div>

@@ -101,6 +101,7 @@ export function useChat() {
     isTyping,      setIsTyping,
     progressText,  setProgressText,
     auditRevision, setAuditRevision,
+    replyContext,  setReplyContext, clearReplyContext,
     threadRef,
     inputRef,
   } = chatState;
@@ -229,6 +230,9 @@ export function useChat() {
       ...m,
       { id: createClientId(), role: 'user', text: userText, sentAt: Date.now() },
     ]);
+    // Reply-style: a reply pill is consumed by the next send (cleared here)
+    // unless it opted into persist:true (e.g. a long-lived "current context").
+    if (replyContext && !replyContext.persist) clearReplyContext();
     setIsTyping(true);
     const _t0 = performance.now();
 
@@ -241,7 +245,17 @@ export function useChat() {
       if (config.debugSimulateError) {
         throw new Error('Simulated error (debugSimulateError is enabled)');
       }
-      const { apiText, inputParams } = await buildEnrichedPayload(userText, config.messageEnrichment, undefined);
+      // A reply/context pill grounds the question. Its quoted text rides along
+      // as inputParams.replySourceText (whether it came from a bubble reply or
+      // from config.replyContext on load), plus any extra `meta` fields — all
+      // renderer-style, so they win over the messageEnrichment base.
+      const replyParams = replyContext
+        ? {
+            ...(replyContext.meta && typeof replyContext.meta === 'object' ? replyContext.meta : {}),
+            replySourceText: replyContext.replySourceText ?? replyContext.text,
+          }
+        : undefined;
+      const { apiText, inputParams } = await buildEnrichedPayload(userText, config.messageEnrichment, replyParams);
       config.onSubmit?.({ userText, apiText, inputParams });
       const res = await apiClient.sendMessage(conversationId, apiText, inputParams);
       const elapsed = Math.round(performance.now() - _t0);
@@ -275,7 +289,7 @@ export function useChat() {
       // Micro-defer so the DOM has updated before we scroll
       requestAnimationFrame(scrollToBottom);
     }
-  }, [input, isTyping, conversationId, apiClient, config, scrollToBottom]);
+  }, [input, isTyping, conversationId, apiClient, config, replyContext, clearReplyContext, scrollToBottom]);
 
   // ── Renderer-initiated send ─────────────────────────────────────────────
   /**
@@ -485,6 +499,7 @@ export function useChat() {
     auditRevision,
     isInitial,
     isMultiLine,
+    replyContext,
     // Refs
     threadRef,
     inputRef,
@@ -494,6 +509,8 @@ export function useChat() {
     submitSilent,
     appendBubble,
     prefillInput,
+    setReplyContext,
+    clearReplyContext,
     resetChat,
     handleKeyDown,
     submitFeedback,

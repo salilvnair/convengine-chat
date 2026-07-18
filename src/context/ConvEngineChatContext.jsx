@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState, useRef } from 'react';
+import { createContext, useContext, useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { createApiClient } from '../api/client.js';
 import { createStreamClient } from '../api/stream.js';
 import { createClientId } from '../utils/uuid.js';
@@ -63,6 +63,10 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       showMaximize:          config.showMaximize          ?? true,
       showMinimize:          config.showMinimize          ?? true,
       showEngineStatus:      config.showEngineStatus      ?? true,
+      // Reply-to-message affordance on assistant bubbles (Reply-style). The
+      // reply icon appears on hover; clicking it quotes that bubble in the
+      // composer and sends its text as inputParams.replySourceText.
+      showBubbleReply:       config.showBubbleReply       ?? true,
       // ── Renderers & callbacks ──────────────────────────────────────────
       rendererProviders: Array.isArray(config.renderers) ? config.renderers : [],
       onMessage:  config.onMessage  ?? null,
@@ -171,16 +175,39 @@ export function ConvEngineChatProvider({ config = {}, children }) {
   const threadRef = useRef(null);
   const inputRef  = useRef(null);
 
+  // ── Reply / context pill — a first-class "reply-to" preview pinned in the
+  // composer. Two ways to drive it, both landing in the same state:
+  //   • declaratively via config.replyContext (reactive — best for consumers
+  //     that already track a "current context" in their own store), or
+  //   • imperatively via actions.setReplyContext()/clearReplyContext().
+  // Shape: { label?, text, accent?, meta?, onClick?, onClear?, clearable? }.
+  //   meta   → folded into inputParams on the next send (grounds the question).
+  //   onClick→ makes the pill a link (e.g. jump to the referenced thing).
+  const [replyContext, setReplyContext] = useState(config.replyContext ?? null);
+  const clearReplyContext = useCallback(() => setReplyContext(null), []);
+  // Sync from config.replyContext without depending on function identity: key
+  // on the serialisable parts so an inline object literal each render is fine.
+  const replyCfgRef = useRef(config.replyContext);
+  replyCfgRef.current = config.replyContext ?? null;
+  const replyKey = config.replyContext
+    ? `${config.replyContext.label ?? ''}|${config.replyContext.text ?? ''}|${JSON.stringify(config.replyContext.meta ?? null)}`
+    : '';
+  useEffect(() => {
+    setReplyContext(replyCfgRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replyKey]);
+
   const chatState = useMemo(() => ({
     messages,      setMessages,
     input,         setInput,
     isTyping,      setIsTyping,
     progressText,  setProgressText,
     auditRevision, setAuditRevision,
+    replyContext,  setReplyContext, clearReplyContext,
     threadRef,
     inputRef,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [messages, input, isTyping, progressText, auditRevision]);
+  }), [messages, input, isTyping, progressText, auditRevision, replyContext]);
 
   return (
     <ConvEngineChatContext.Provider value={{ ...ctx, chatState }}>
