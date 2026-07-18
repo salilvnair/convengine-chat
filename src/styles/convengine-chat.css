@@ -1571,39 +1571,157 @@
 .ce-chat-root .ce-audit-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 9px;
 }
 
-.ce-chat-root .ce-audit-entry {
-  border-radius: 8px;
-  overflow: hidden;
+/* ── Audit stage card — a designed step, not a collapsed thin bar ─────────── */
+.ce-chat-root .ce-audit-card {
+  border-radius: 10px;
   border: 1px solid var(--ce-border-color);
+  border-left: 3px solid #94a3b8;
   background: var(--ce-bg-panel);
+  overflow: hidden;
 }
 
-.ce-chat-root .ce-audit-entry-header {
+.ce-chat-root .ce-audit-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  border-left: 3px solid #94a3b8;
-  cursor: pointer;
-  user-select: none;
-  transition: background var(--ce-transition-fast);
+  gap: 7px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--ce-border-color);
 }
 
-.ce-chat-root .ce-audit-entry-header:hover {
-  background: var(--ce-color-accent-light);
+.ce-chat-root .ce-audit-dot {
+  width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0;
 }
 
-.ce-chat-root .ce-audit-stage {
-  font-size: 10px;
-  font-weight: 600;
+.ce-chat-root .ce-audit-card-title {
+  font-size: 11px;
+  font-weight: 700;
   color: var(--ce-text-primary);
-  word-break: break-all;
+  letter-spacing: 0.01em;
+}
+
+.ce-chat-root .ce-audit-step-no {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ce-text-secondary);
+  background: var(--ce-bg-header);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 99px;
+  min-width: 15px; text-align: center;
+  padding: 0 5px; line-height: 15px;
+}
+
+.ce-chat-root .ce-audit-raw-toggle {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ce-text-secondary);
+  background: transparent;
+  border: 1px solid var(--ce-border-color);
+  border-radius: 6px;
+  padding: 1px 5px;
+  cursor: pointer;
+  transition: color var(--ce-transition-fast), border-color var(--ce-transition-fast);
+}
+.ce-chat-root .ce-audit-raw-toggle:hover,
+.ce-chat-root .ce-audit-raw-toggle.is-active {
+  color: var(--ce-color-accent);
+  border-color: var(--ce-color-accent);
+}
+
+.ce-chat-root .ce-audit-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+}
+
+.ce-chat-root .ce-audit-tagrow { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.ce-chat-root .ce-audit-pill {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+  color: var(--ce-text-secondary);
+  background: var(--ce-bg-header);
+  border: 1px solid var(--ce-border-color);
+  white-space: nowrap;
+}
+
+.ce-chat-root .ce-audit-question {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ce-text-primary);
+}
+
+.ce-chat-root .ce-audit-headline {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--ce-text-primary);
+}
+
+.ce-chat-root .ce-audit-answer {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ce-text-secondary);
+}
+
+.ce-chat-root .ce-audit-error-text { color: var(--ce-color-error); }
+
+.ce-chat-root .ce-audit-field { display: flex; flex-direction: column; gap: 3px; }
+
+.ce-chat-root .ce-audit-field-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ce-text-secondary);
+}
+
+.ce-chat-root .ce-audit-list {
+  margin: 0;
+  padding-left: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ce-chat-root .ce-audit-list li { font-size: 11px; line-height: 1.45; color: var(--ce-text-primary); }
+.ce-chat-root .ce-audit-list--muted li { color: var(--ce-text-secondary); }
+
+.ce-chat-root .ce-audit-collapsible {
+  border: 1px solid var(--ce-border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ce-bg-header);
+}
+.ce-chat-root .ce-audit-collapsible-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.ce-chat-root .ce-audit-collapsible-len {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--ce-text-secondary);
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
 }
 
 .ce-chat-root .ce-audit-chevron {
@@ -1618,17 +1736,19 @@
   transform: rotate(180deg);
 }
 
-.ce-chat-root .ce-audit-payload {
+.ce-chat-root .ce-audit-pre {
+  margin: 0;
   font-family: "SF Mono", "Consolas", "Monaco", monospace;
   font-size: 10px;
   line-height: 1.5;
   white-space: pre-wrap;
+  word-break: break-word;
   color: var(--ce-text-secondary);
   padding: 8px;
   border-top: 1px solid var(--ce-border-color);
   background: var(--ce-bg-header);
   overflow-x: auto;
-  max-height: 200px;
+  max-height: 320px;
   overflow-y: auto;
 }
 
