@@ -26,7 +26,16 @@ export function UserMessage({ bubble }) {
           <UserIcon />
         </div>
         <div className="ce-message-content">
-          <div className={`ce-bubble ce-bubble--user ${bubbleShapeClass(bubble.text)}`}>
+          <div className={`ce-bubble ce-bubble--user ${bubble.reply ? 'ce-bubble--has-reply' : ''} ${bubbleShapeClass(bubble.text)}`}>
+            {bubble.reply && (
+              <span
+                className="ce-bubble-reply-quote"
+                style={bubble.reply.accent ? { '--ce-reply-accent': bubble.reply.accent } : undefined}
+              >
+                {bubble.reply.label && <span className="ce-bubble-reply-quote-label">{bubble.reply.label}</span>}
+                <span className="ce-bubble-reply-quote-text">{bubble.reply.text}</span>
+              </span>
+            )}
             <span className="ce-bubble-text">{bubble.text}</span>
           </div>
           {hasDebugChips && (

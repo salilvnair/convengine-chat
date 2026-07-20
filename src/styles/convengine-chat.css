@@ -288,17 +288,26 @@
   gap: 0; /* messages use margin-bottom instead of gap */
 }
 
+/* Bottom-anchor the conversation (WhatsApp / panel-mode feel) so a short thread
+   sits just above the composer instead of floating at the top of a tall
+   viewport. The auto top-margin on the first message collapses to 0 once the
+   content overflows, so scrolling up to older messages still works. */
+.ce-chat-root .ce-thread--fullscreen > :first-child { margin-top: auto; }
+
+/* Use the available width — only a ~28px gutter each side (was a narrow 920px
+   centered column that wasted most of a wide screen). The composer below matches
+   this exactly so the input lines up with the messages. */
 .ce-chat-root .ce-thread--fullscreen .ce-message,
 .ce-chat-root .ce-thread--fullscreen .ce-message-thinking {
-  max-width: 920px;
+  max-width: none;
   width: 100%;
   box-sizing: border-box;
-  margin: 0 auto 24px;
-  padding: 0 18px;
+  margin: 0 0 24px;
+  padding: 0 28px;
 }
 
 .ce-chat-root .ce-thread--fullscreen .ce-message-content {
-  max-width: min(760px, 100%);
+  max-width: 100%;
 }
 
 .ce-chat-root .ce-thread--fullscreen .ce-avatar {
@@ -314,9 +323,9 @@
 .ce-chat-root .ce-thread--fullscreen .ce-feedback-row {
   width: 100%;
   box-sizing: border-box;
-  max-width: 920px;
-  margin: -16px auto 18px;
-  padding: 0 18px 0 70px; /* 18px side + 40px avatar + 12px gap */
+  max-width: none;
+  margin: -16px 0 18px;
+  padding: 0 28px 0 80px; /* 28px side + 40px avatar + 12px gap */
 }
 
 /* ── Fullscreen footer — floating pill, no border, matches chat-composer-wrap ── */
@@ -327,8 +336,11 @@
 }
 
 .ce-chat-root .ce-composer.ce-composer--fullscreen {
-  width: min(800px, 100%);
-  margin: 0 auto;
+  /* Full width (minus the footer's 28px gutter) so the input is the SAME width as
+     the messages above it — not a narrower centered 800px pill. */
+  width: 100%;
+  max-width: none;
+  margin: 0;
   border-radius: 30px;
   background: var(--ce-bg-composer-surface);
   border: 1px solid rgba(13, 13, 13, 0.10);
@@ -462,6 +474,10 @@
 
 .ce-chat-root .ce-panel--bottom { bottom: calc(var(--ce-fab-size) + 24px); }
 .ce-chat-root .ce-panel--top    { top:    calc(var(--ce-fab-size) + 24px); }
+/* No FAB (consumer-driven open) → the panel sits closer to the edge since there
+   is no launcher button to clear. */
+.ce-chat-root .ce-panel--nofab.ce-panel--bottom { bottom: 24px; }
+.ce-chat-root .ce-panel--nofab.ce-panel--top    { top: 24px; }
 .ce-chat-root .ce-panel--right  { right: 24px; }
 .ce-chat-root .ce-panel--left   { left:  24px; }
 
@@ -662,7 +678,10 @@
   text-align: left;
   transition: background 0.12s;
   width: 100%;
+  white-space: nowrap;   /* keep "Fullscreen (new tab)" on one line */
 }
+/* The menu icon must not shrink so the label never wraps under it. */
+.ce-chat-root .ce-mode-menu-item > svg { flex-shrink: 0; }
 
 .ce-chat-root .ce-mode-menu-item:hover {
   background: var(--ce-color-accent-light);
@@ -675,6 +694,11 @@
   text-align: center;
   flex-shrink: 0;
 }
+
+/* ── subHeader slot — a consumer-owned region below the header, above the body.
+   The library only guarantees it never grows/scrolls the panel; the content
+   and its styling are entirely the consumer's. */
+.ce-chat-root .ce-subheader { flex-shrink: 0; min-width: 0; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    CHAT BODY (thread + optional audit sidebar)
@@ -742,6 +766,10 @@
 
 .ce-chat-root .ce-message--user .ce-message-row {
   flex-direction: row-reverse;
+  /* Full-width row (content still packs to the right via row-reverse) so a
+     reply bubble's percentage width resolves against the real thread width, not
+     a shrink-to-fit row. */
+  width: 100%;
 }
 
 /* Wide variant for table responses */
@@ -823,6 +851,14 @@
 .ce-chat-root .ce-message--user .ce-message-content {
   align-items: flex-end;
 }
+/* A reply bubble carries a quote AND the reply text. Intrinsic (fit/max-content)
+   sizing is circular here — the quote sizes the bubble, then the text's
+   max-width:100% ties back to that width and wraps short text. Give the reply
+   message a definite width relative to the (definite) row instead, so both the
+   quote and short text fit on one line; long text still wraps within it. */
+.ce-chat-root .ce-message--user .ce-message-content:has(.ce-bubble--has-reply) {
+  width: min(72%, 320px);
+}
 
 .ce-chat-root .ce-message--wide .ce-message-content {
   max-width: 100%;
@@ -856,6 +892,35 @@
   border: 1px solid rgba(147, 197, 253, 0.30);
 }
 
+/* ── Reply quote INSIDE the bubble (WhatsApp-style: quoted preview on top,
+   the user's own text below). The quote is a block-level box (its own line);
+   the text stays INLINE so its max-content drives the bubble's fit-content
+   width — otherwise a block/flex text child fills the quote's width and wraps
+   short text. ───────────────────────────────────────────────────────────── */
+.ce-chat-root .ce-bubble-reply-quote {
+  display: block;
+  margin-bottom: 6px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border-left: 3px solid var(--ce-reply-accent, currentColor);
+  background: rgba(255, 255, 255, 0.16);   /* translucent panel on the accent bubble */
+  min-width: 0;
+}
+.ce-chat-root .ce-bubble-reply-quote-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.ce-chat-root .ce-bubble-reply-quote-text {
+  display: block;
+  font-size: var(--ce-font-size-sm);
+  opacity: 0.92;
+  overflow-wrap: anywhere;
+}
+
 /* ── Agent bubble — sharp bottom-left corner (speech tail) ─────────── */
 .ce-chat-root .ce-bubble--agent {
   background: var(--ce-bg-bubble-agent);
@@ -875,9 +940,18 @@
   font-size: var(--ce-font-size-base);
   line-height: var(--ce-line-height);
   white-space: pre-wrap;
-  word-break: break-word;
+  /* overflow-wrap breaks a long word only when it would overflow. (We do NOT
+     use word-break: break-word — it collapses the text's min-content to ~0, so
+     the bubble shrinks and short text wraps for no reason.) */
   overflow-wrap: break-word;
   margin: 0;
+}
+/* Let the user text size to its own content (up to the bubble max) so short
+   text stays on one line and only wraps when it genuinely exceeds the width. */
+.ce-chat-root .ce-bubble--user .ce-bubble-text {
+  display: inline-block;
+  width: max-content;
+  max-width: 100%;
 }
 
 .ce-chat-root .ce-bubble-text--error {
@@ -1170,6 +1244,13 @@
 .ce-chat-root .ce-composer--has-reply .ce-composer-send { top: auto; bottom: 8px; transform: none; }
 .ce-chat-root .ce-composer--has-reply .ce-composer-send:hover:not(:disabled) { transform: scale(1.06); }
 .ce-chat-root .ce-composer--has-reply .ce-composer-send:disabled { transform: none; }
+/* The composer reserves a large RIGHT padding for the absolute send button, but
+   in has-reply mode the send button sits at the BOTTOM — so the reply pill (a
+   top row) shouldn't inherit that inset, or it looks cut off on the right.
+   Cancel the extra right padding so the pill spans the full input width. */
+.ce-chat-root .ce-composer--has-reply .ce-composer-reply {
+  margin-right: calc(-1 * (var(--ce-composer-pad-r) - var(--ce-composer-pad-l)));
+}
 
 .ce-chat-root .ce-composer-reply {
   display: flex;

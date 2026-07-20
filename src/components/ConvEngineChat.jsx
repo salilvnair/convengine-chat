@@ -56,6 +56,12 @@ function isSolidColorToken(value) {
  *   avatars and the send button all shrink/grow together. `md` is the default
  *   (unchanged look); `sm`/`xs` are neat/compact; `lg` is roomier.
  *
+ * @param {React.ReactNode} [props.subHeader]
+ *   Optional consumer content rendered in a slot directly below the header and
+ *   above the chat body (in every mode) — e.g. a conversation-history dropdown,
+ *   a banner, filters, or nothing. The library supplies only a flex-shrink
+ *   wrapper; you own the content and its styling.
+ *
  * @param {object} [props.config={}]
  *   Configuration bag:
  *   {
@@ -99,6 +105,9 @@ export function ConvEngineChat({
   theme = {},
   onModeChange,
   actionsRef = null,
+  subHeader = null,
+  open,
+  onOpenChange,
 }) {
   const { isDark, toggleTheme } = useTheme(config.showDarkModeLightMode, config.defaultDark ?? false);
 
@@ -177,7 +186,7 @@ export function ConvEngineChat({
         style={Object.keys(rootStyle).length ? rootStyle : undefined}
       >
         {mode === 'fullscreen' ? (
-          <FullscreenMode isDark={isDark} toggleTheme={toggleTheme} actionsRef={actionsRef} />
+          <FullscreenMode isDark={isDark} toggleTheme={toggleTheme} actionsRef={actionsRef} subHeader={subHeader} />
         ) : mode === 'sidepanel' ? (
           <SidepanelMode
             align={align}
@@ -186,6 +195,9 @@ export function ConvEngineChat({
             onModeChange={handleModeChange}
             initialOpen={mountOpen}
             actionsRef={actionsRef}
+            subHeader={subHeader}
+            open={open}
+            onOpenChange={onOpenChange}
           />
         ) : (
           <PanelMode
@@ -196,6 +208,9 @@ export function ConvEngineChat({
             onModeChange={handleModeChange}
             initialOpen={mountOpen}
             actionsRef={actionsRef}
+            subHeader={subHeader}
+            open={open}
+            onOpenChange={onOpenChange}
           />
         )}
       </div>

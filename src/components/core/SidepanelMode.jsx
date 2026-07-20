@@ -5,6 +5,7 @@ import { useIcons } from '../../hooks/useIcons.js';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
+import { hasFullscreenTab, openFullscreenTab } from '../../utils/fullscreenTab.js';
 
 /**
  * Sidepanel mode — a full-height drawer anchored to the left or right edge.
@@ -13,12 +14,17 @@ import { ChatArea } from '../core/ChatArea.jsx';
  * Props:
  *   align  "right" | "left"  (default: "right")
  */
-export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null }) {
+export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null, subHeader = null, open, onOpenChange }) {
   const { config } = useConvEngineChatContext();
   const {
-    AuditIcon, ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
+    AuditIcon, ChatBubbleIcon, CloseIcon, LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon, PopoutIcon,
   } = useIcons();
-  const [isOpen,         setIsOpen]         = useState(initialOpen);
+  // Controlled vs uncontrolled open (mirrors PanelMode) so a consumer can drive
+  // it from its own launcher; config.showFab:false hides the built-in tab.
+  const isOpenControlled = open !== undefined;
+  const [internalOpen,   setInternalOpen]   = useState(initialOpen);
+  const isOpen = isOpenControlled ? open : internalOpen;
+  const setIsOpen = (v) => { if (isOpenControlled) onOpenChange?.(v); else setInternalOpen(v); };
   const [auditOpen,      setAuditOpen]      = useState(false);
   const [confirmNewChat, setConfirmNewChat] = useState(false);
   const [modeMenuOpen,   setModeMenuOpen]   = useState(false);
@@ -62,7 +68,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
   // Expose chat actions to external consumers via actionsRef
   useEffect(() => {
     if (!actionsRef) return;
-    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, reset: resetChat };
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, getMessages: () => messages, reset: resetChat };
     return () => { if (actionsRef) actionsRef.current = null; };
   });
 
@@ -120,8 +126,8 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
         </button>
       )}
 
-      {/* Mode picker */}
-      {onModeChange && (
+      {/* Mode picker — sidepanel modes + optional "Fullscreen (new tab)". */}
+      {(onModeChange || hasFullscreenTab(config)) && (
         <div ref={modeMenuRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -136,7 +142,7 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
           </button>
           {modeMenuOpen && (
             <div className="ce-mode-menu" role="menu">
-              {modeOptions.map((opt) => (
+              {onModeChange && modeOptions.map((opt) => (
                 <button
                   key={opt.id}
                   role="menuitem"
@@ -150,6 +156,16 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
                   {opt.label}
                 </button>
               ))}
+              {hasFullscreenTab(config) && (
+                <button
+                  role="menuitem"
+                  className="ce-mode-menu-item"
+                  onClick={() => { setModeMenuOpen(false); openFullscreenTab(config); }}
+                >
+                  <PopoutIcon style={{ width: 15, height: 15, marginRight: 6 }} />
+                  Fullscreen (new tab)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -170,8 +186,9 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
   return (
     <ChatActionsContext.Provider value={chatActions}>
       <>
-        {/* ── FAB button (shown when drawer is closed) ──────────────────── */}
-        {!isOpen && (
+        {/* ── FAB button (shown when drawer is closed; hidden when the consumer
+            drives open itself via config.showFab:false) ─────────────────── */}
+        {!isOpen && config.showFab !== false && (
           <button
             type="button"
             className={`ce-fab ce-fab--bottom ce-fab--${align}`}
@@ -219,6 +236,8 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
             onToggleTheme={toggleTheme}
             actions={headerActions}
           />
+
+          {subHeader && <div className="ce-subheader">{subHeader}</div>}
 
           <ChatArea
             variant="sidepanel"

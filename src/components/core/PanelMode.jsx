@@ -5,6 +5,7 @@ import { useIcons } from '../../hooks/useIcons.js';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
+import { hasFullscreenTab, openFullscreenTab } from '../../utils/fullscreenTab.js';
 
 /**
  * Panel mode — a floating FAB button that opens a chat panel anchored to a
@@ -14,14 +15,21 @@ import { ChatArea } from '../core/ChatArea.jsx';
  *   position  "bottom" | "top"    (default: "bottom")
  *   align     "right"  | "left"   (default: "right")
  */
-export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null }) {
+export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null, subHeader = null, open, onOpenChange }) {
   const { config } = useConvEngineChatContext();
+  // Controlled vs uncontrolled open: when `open` is provided, the consumer owns
+  // the open state (e.g. drives it from its own launcher) — otherwise the FAB
+  // toggles an internal state. `config.showFab: false` hides the built-in FAB
+  // for consumers that provide their own trigger.
+  const isOpenControlled = open !== undefined;
   const {
     ChatBubbleIcon, CloseIcon, MinimizeIcon,
     MaximizeIcon, RestoreIcon, RestoreFromMinIcon,
-    LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon,
+    LayoutIcon, NewChatIcon, PanelLeftIcon, PanelRightIcon, PopoutIcon,
   } = useIcons();
-  const [isOpen,          setIsOpen]          = useState(initialOpen);
+  const [internalOpen,    setInternalOpen]    = useState(initialOpen);
+  const isOpen  = isOpenControlled ? open : internalOpen;
+  const setIsOpen = (v) => { if (isOpenControlled) onOpenChange?.(v); else setInternalOpen(v); };
   const [isMinimized,     setIsMinimized]     = useState(false);
   const [isPopout,        setIsPopout]        = useState(false);
   const [popoutPos,       setPopoutPos]       = useState({ x: null, y: null });
@@ -70,7 +78,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
   // Expose chat actions to external consumers via actionsRef
   useEffect(() => {
     if (!actionsRef) return;
-    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, reset: resetChat };
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, getMessages: () => messages, reset: resetChat };
     return () => { if (actionsRef) actionsRef.current = null; };
   });
 
@@ -164,8 +172,9 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
         </button>
       )}
 
-      {/* Mode picker */}
-      {config.showLayoutPicker && onModeChange && (
+      {/* Mode picker — sidepanel modes (needs onModeChange) + optional
+          "Fullscreen (new tab)" when a fullscreenTabUrl / callback is set. */}
+      {config.showLayoutPicker && (onModeChange || hasFullscreenTab(config)) && (
         <div ref={modeMenuRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -180,7 +189,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
           </button>
           {modeMenuOpen && (
             <div className="ce-mode-menu" role="menu">
-              {modeOptions.map((opt) => (
+              {onModeChange && modeOptions.map((opt) => (
                 <button
                   key={opt.id}
                   role="menuitem"
@@ -191,6 +200,16 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
                   {opt.label}
                 </button>
               ))}
+              {hasFullscreenTab(config) && (
+                <button
+                  role="menuitem"
+                  className="ce-mode-menu-item"
+                  onClick={() => { setModeMenuOpen(false); openFullscreenTab(config); }}
+                >
+                  <PopoutIcon style={{ width: 15, height: 15, marginRight: 6 }} />
+                  Fullscreen (new tab)
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -259,7 +278,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
     <>
       {/* ── Floating chat panel ───────────────────────────────────────────── */}
       <div
-        className={`ce-panel ${posClass} ${alignClass} ${panelStateClass}`}
+        className={`ce-panel ${posClass} ${alignClass} ${panelStateClass} ${config.showFab === false ? 'ce-panel--nofab' : ''}`}
         style={popoutStyle}
         role="dialog"
         aria-modal="false"
@@ -295,6 +314,8 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
           actions={headerActions}
         />
 
+        {!isMinimized && subHeader && <div className="ce-subheader">{subHeader}</div>}
+
         {!isMinimized && (
           <ChatArea
             isInitial={isInitial}
@@ -316,32 +337,35 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
         )}
       </div>  {/* end ce-panel */}
 
-      {/* ── FAB launcher button ───────────────────────────────────────────── */}
-      <button
-        type="button"
-        className={`ce-fab ${fabPosClass} ${fabAlignClass} ${isOpen ? 'ce-fab--active' : ''}`}
-        title={isOpen ? 'Close chat' : 'Open chat'}
-        aria-label={isOpen ? 'Close chat' : 'Open chat'}
-        aria-expanded={isOpen}
-        aria-controls="ce-chat-panel"
-        onClick={() => {
-          if (isOpen) {
-            setIsOpen(false);
-            setIsMinimized(false);
-            setIsPopout(false);
-          } else {
-            setIsOpen(true);
-            setIsMinimized(false);
-          }
-        }}
-      >
-        <span className={`ce-fab-icon ce-fab-icon--chat ${isOpen ? 'ce-fab-icon--hidden' : ''}`}>
-          <ChatBubbleIcon />
-        </span>
-        <span className={`ce-fab-icon ce-fab-icon--close ${!isOpen ? 'ce-fab-icon--hidden' : ''}`}>
-          <CloseIcon />
-        </span>
-      </button>
+      {/* ── FAB launcher button — hidden when the consumer provides its own
+          trigger via config.showFab:false (e.g. drives `open` externally). ── */}
+      {config.showFab !== false && (
+        <button
+          type="button"
+          className={`ce-fab ${fabPosClass} ${fabAlignClass} ${isOpen ? 'ce-fab--active' : ''}`}
+          title={isOpen ? 'Close chat' : 'Open chat'}
+          aria-label={isOpen ? 'Close chat' : 'Open chat'}
+          aria-expanded={isOpen}
+          aria-controls="ce-chat-panel"
+          onClick={() => {
+            if (isOpen) {
+              setIsOpen(false);
+              setIsMinimized(false);
+              setIsPopout(false);
+            } else {
+              setIsOpen(true);
+              setIsMinimized(false);
+            }
+          }}
+        >
+          <span className={`ce-fab-icon ce-fab-icon--chat ${isOpen ? 'ce-fab-icon--hidden' : ''}`}>
+            <ChatBubbleIcon />
+          </span>
+          <span className={`ce-fab-icon ce-fab-icon--close ${!isOpen ? 'ce-fab-icon--hidden' : ''}`}>
+            <CloseIcon />
+          </span>
+        </button>
+      )}
     </>
     </ChatActionsContext.Provider>
   );

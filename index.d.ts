@@ -159,6 +159,10 @@ export interface ConvEngineChatConfig {
   apiHost?: string;
   /** Resume an existing conversation by ID. */
   conversationId?: string;
+  /** Seed the thread with pre-existing messages (used once at mount). Snapshot
+   *  another instance's messages with `actions.getMessages()` and pass them here
+   *  to carry a conversation over (e.g. "pop out to a tab"). */
+  initialMessages?: ChatMessage[];
   /** Override individual endpoint paths. Unspecified endpoints keep their defaults. */
   apiEndpoints?: ConvEngineChatApiEndpoints;
   /** A reply/context pill pinned in the composer. Reactive — update it (or set
@@ -184,6 +188,16 @@ export interface ConvEngineChatConfig {
    *  bubble in the composer and sends its text as `inputParams.replySourceText`.
    *  @default true */
   showBubbleReply?: boolean;
+  /** The built-in FAB launcher (panel mode). Set `false` when you drive `open`
+   *  from your own trigger. @default true */
+  showFab?: boolean;
+  /** "Open fullscreen in a new tab" — a URL the widget opens in a new browser
+   *  tab. When set (or `onOpenFullscreenTab` is), the layout picker gains a
+   *  "Fullscreen (new tab)" option and fullscreen mode gains a header button. */
+  fullscreenTabUrl?: string;
+  /** Callback for "Open fullscreen in a new tab" — the consumer opens the tab
+   *  itself (wins over `fullscreenTabUrl` when both are set). */
+  onOpenFullscreenTab?: () => void;
   /** 🌙/☀️ toggle in header. @default false */
   showDarkModeLightMode?: boolean;
   /** Pulsing dot next to header title. @default true */
@@ -355,15 +369,30 @@ export interface ConvEngineChatProps {
    *  and the send button scale together. `md` is unchanged; `sm`/`xs` are
    *  compact; `lg` is roomier. @default 'md' */
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  /** Consumer content rendered in a slot directly below the header and above
+   *  the chat body (every mode) — e.g. a conversation-history dropdown, a
+   *  banner, or nothing. The library supplies only a flex-shrink wrapper. */
+  subHeader?: React.ReactNode;
   /** Runtime configuration. */
   config?: ConvEngineChatConfig;
   /** CSS custom-property overrides, auto-prefixed with `--ce-`.
    *  e.g. `{ 'color-accent': '#6366f1', 'panel-width': '460px' }` */
   theme?: Record<string, string>;
-  /** Called with the new mode string when the user switches mode from the header picker. */
-  onModeChange?: (mode: 'panel' | 'sidepanel' | 'fullscreen') => void;
+  /** Called when the user picks a layout from the header mode picker. The id is
+   *  compound so the consumer can decode both the mode AND the side in one value:
+   *  - `'panel'`          → render `mode="panel"`
+   *  - `'sidepanel-left'` → render `mode="sidepanel"` `align="left"`
+   *  - `'sidepanel-right'`→ render `mode="sidepanel"` `align="right"`
+   *  ("Fullscreen (new tab)" is a separate action — see `onOpenFullscreenTab`.) */
+  onModeChange?: (mode: 'panel' | 'sidepanel-left' | 'sidepanel-right') => void;
   /** A ref that receives the imperative actions handle while mounted. */
   actionsRef?: React.MutableRefObject<ConvEngineChatActionsHandle | null> | null;
+  /** Controlled open state (panel mode). When provided, the consumer owns the
+   *  open state (drive it from your own launcher); pair with `onOpenChange` and
+   *  usually `config.showFab: false`. Omit for the built-in FAB toggle. */
+  open?: boolean;
+  /** Called with the next open state when the panel opens/closes. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export declare function ConvEngineChat(props: ConvEngineChatProps): React.ReactElement | null;
@@ -428,6 +457,9 @@ export interface ConvEngineChatActionsHandle {
   prefillInput: (text: string) => void;
   setReplyContext: (ctx: ConvEngineChatReplyContext | null) => void;
   clearReplyContext: () => void;
+  /** Snapshot the current messages (e.g. to seed `config.initialMessages` on
+   *  another instance when popping the conversation out to a tab). */
+  getMessages: () => ChatMessage[];
   reset: () => void;
 }
 

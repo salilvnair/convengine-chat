@@ -5,6 +5,7 @@ import { useIcons } from '../../hooks/useIcons.js';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
 import { AuditPanel } from '../core/AuditPanel.jsx';
+import { hasFullscreenTab, openFullscreenTab } from '../../utils/fullscreenTab.js';
 
 const DEFAULT_AUDIT_WIDTH = 320;
 const MIN_AUDIT_WIDTH     = 220;
@@ -15,9 +16,9 @@ const MAX_AUDIT_RATIO     = 0.55;
  * Header bar at top with new-chat + audit toggle + optional dark-mode toggle.
  * Audit panel slides in from the right with a draggable divider.
  */
-export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
+export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHeader = null }) {
   const { config } = useConvEngineChatContext();
-  const { AuditIcon, SunIcon, MoonIcon, NewChatIcon } = useIcons();
+  const { AuditIcon, SunIcon, MoonIcon, NewChatIcon, PopoutIcon } = useIcons();
   const [auditOpen,      setAuditOpen]      = useState(false);
   const [auditWidth,     setAuditWidth]     = useState(DEFAULT_AUDIT_WIDTH);
   const [auditResizing,  setAuditResizing]  = useState(false);
@@ -81,7 +82,7 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
   // Expose chat actions to external consumers via actionsRef
   useEffect(() => {
     if (!actionsRef) return;
-    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, reset: resetChat };
+    actionsRef.current = { submit: submitFromRenderer, submitSilent, appendBubble, prefillInput, setReplyContext, clearReplyContext, getMessages: () => messages, reset: resetChat };
     return () => { if (actionsRef) actionsRef.current = null; };
   });
 
@@ -136,6 +137,17 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
             )}
           </div>
           <div className="ce-fullscreen-header-actions">
+            {hasFullscreenTab(config) && (
+              <button
+                type="button"
+                className="ce-header-btn"
+                title="Open in a new tab"
+                aria-label="Open in a new tab"
+                onClick={() => openFullscreenTab(config)}
+              >
+                <PopoutIcon />
+              </button>
+            )}
             {config.showNewChat && (
               <button
                 type="button"
@@ -172,6 +184,8 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null }) {
             )}
           </div>
         </div>
+
+        {subHeader && <div className="ce-subheader">{subHeader}</div>}
 
         {/* ── Body: chat area — full width; audit overlays absolutely ────── */}
         <div className={`ce-fullscreen-body${auditResizing ? ' ce-fullscreen-body--resizing' : ''}`}>

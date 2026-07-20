@@ -62,11 +62,19 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       showLayoutPicker:      config.showLayoutPicker      ?? true,
       showMaximize:          config.showMaximize          ?? true,
       showMinimize:          config.showMinimize          ?? true,
+      // The built-in FAB launcher (panel mode). Set false when you drive `open`
+      // from your own trigger and don't want the library's floating button.
+      showFab:               config.showFab               ?? true,
       showEngineStatus:      config.showEngineStatus      ?? true,
       // Reply-to-message affordance on assistant bubbles (Reply-style). The
       // reply icon appears on hover; clicking it quotes that bubble in the
       // composer and sends its text as inputParams.replySourceText.
       showBubbleReply:       config.showBubbleReply       ?? true,
+      // "Open fullscreen in a new tab" — a URL to open, or a callback the
+      // consumer handles. When set, the layout picker (panel/sidepanel) gains a
+      // "Fullscreen (new tab)" option and fullscreen mode gains a header button.
+      fullscreenTabUrl:      config.fullscreenTabUrl      ?? null,
+      onOpenFullscreenTab:   config.onOpenFullscreenTab   ?? null,
       // ── Renderers & callbacks ──────────────────────────────────────────
       rendererProviders: Array.isArray(config.renderers) ? config.renderers : [],
       onMessage:  config.onMessage  ?? null,
@@ -167,7 +175,12 @@ export function ConvEngineChatProvider({ config = {}, children }) {
   );
 
   // ── Shared chat state — lives here so it survives mode switches ──────────
-  const [messages,      setMessages]      = useState([]);
+  // Seed from config.initialMessages so a new instance can carry an existing
+  // conversation over (e.g. "pop out to a tab" — snapshot via actions.getMessages
+  // and pass the array here). Used once at mount.
+  const [messages,      setMessages]      = useState(
+    () => (Array.isArray(config.initialMessages) ? config.initialMessages : []),
+  );
   const [input,         setInput]         = useState('');
   const [isTyping,      setIsTyping]      = useState(false);
   const [progressText,  setProgressText]  = useState('');

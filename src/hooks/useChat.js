@@ -218,6 +218,23 @@ export function useChat() {
     scrollToBottom();
   }, [messages.length, isTyping, scrollToBottom]);
 
+  // Async-growing content fix: a rich assistant answer (Markdown, code blocks,
+  // custom renderer cards) finishes laying out AFTER the message is added, so the
+  // scroll above pins to a stale height and the card's bottom is left cut off.
+  // Watch the thread's content for growth and, while the user is at/near the
+  // bottom, re-pin — so a tall answer card is always fully revealed.
+  useEffect(() => {
+    const el = threadRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (dist < 160) el.scrollTop = el.scrollHeight;   // only follow if not scrolled up
+    });
+    Array.from(el.children).forEach((c) => ro.observe(c));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [messages.length]);
+
   // ── Send a message ───────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const userText = input.trim();
@@ -226,9 +243,14 @@ export function useChat() {
     config.onMessage?.(userText);
     setInput('');
     setProgressText('');
+    // Attach the active reply to the SENT bubble so it shows the quote on top,
+    // then the user's text below (reply-preview-inside-the-bubble style).
+    const activeReply = replyContext
+      ? { label: replyContext.label, text: replyContext.text, accent: replyContext.accent }
+      : undefined;
     setMessages((m) => [
       ...m,
-      { id: createClientId(), role: 'user', text: userText, sentAt: Date.now() },
+      { id: createClientId(), role: 'user', text: userText, reply: activeReply, sentAt: Date.now() },
     ]);
     // Reply-style: a reply pill is consumed by the next send (cleared here)
     // unless it opted into persist:true (e.g. a long-lived "current context").
