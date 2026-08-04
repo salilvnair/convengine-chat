@@ -92,6 +92,19 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       composerBg:      config.composerBg      ?? null,
       iconColor:       config.iconColor       ?? null,
       composerShape:   config.composerShape   ?? 'round',
+
+      // Attachments + the agent label beside send.
+      //
+      // This provider resolves config into an explicit ALLOWLIST rather than
+      // spreading the caller's object, so any key not listed here is silently
+      // dropped: the consumer sets it, nothing errors, and the feature simply
+      // never turns on. Confirmed live — config.attachments.enabled was true
+      // at <ConvEngineChat> and false by the time useChat read it, with every
+      // component in between wired correctly. Adding a config key means adding
+      // it here too.
+      attachments:     config.attachments     ?? null,
+      agentName:       config.agentName       ?? '',
+
       // ── Message enrichment ─────────────────────────────────────────────
       // messageEnrichment: {
       //   prefix:      string,     // optional — wraps outgoing text: "{prefix} {text} {suffix}"
