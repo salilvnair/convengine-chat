@@ -50,6 +50,10 @@ export function ChatComposer({
     el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
   }, [input, inputRef]);
 
+  // Whether the composer renders as a STACK (files / box / bar) or as the
+  // original single box. The agent chip alone is enough to need the bar.
+  const showToolbar = attachmentsEnabled || Boolean(agentName);
+
   const composerClass = [
     'ce-composer',
     centered    ? 'ce-composer--centered'    : '',
@@ -57,12 +61,14 @@ export function ChatComposer({
     fullscreen  ? 'ce-composer--fullscreen'  : '',
     shape === 'rect' ? 'ce-composer--rect' : '',
     reply ? 'ce-composer--has-reply' : '',
-    attachmentsEnabled ? 'ce-composer--has-toolbar' : '',
+    // Must track showToolbar, NOT attachmentsEnabled. Keyed to attachments
+    // alone, turning attachments off while keeping an agentName rendered the
+    // stacked markup with none of the CSS that lays it out — the shell stayed
+    // a row, so the agent chip fell back INSIDE the input box next to send.
+    showToolbar ? 'ce-composer--has-toolbar' : '',
   ]
     .filter(Boolean)
     .join(' ');
-
-  const showToolbar = attachmentsEnabled || Boolean(agentName);
 
   const replyClickable = reply && typeof reply.onClick === 'function';
 
