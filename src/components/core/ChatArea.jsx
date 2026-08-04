@@ -55,6 +55,13 @@ export function ChatArea({
   onCloseAudit,
   engineStatus,
   onChipClick,
+  // attachments (from useChat, threaded down by ConvEngineChat)
+  attachments = [],
+  attachmentError = '',
+  attachmentsEnabled = false,
+  acceptFileTypes = '',
+  onFilesPicked,
+  onRemoveAttachment,
 }) {
   const { config, chatState } = useConvEngineChatContext();
   const isFullscreen = variant === 'fullscreen';
@@ -74,6 +81,13 @@ export function ChatArea({
       return (
         <div className="ce-chat-body">
           <ChatLanding
+            attachmentsEnabled={attachmentsEnabled}
+            attachments={attachments}
+            attachmentError={attachmentError}
+            acceptFileTypes={acceptFileTypes}
+            onFilesPicked={onFilesPicked}
+            onRemoveAttachment={onRemoveAttachment}
+            agentName={config.agentName}
             fullscreen
             hideComposer
             title={config.title}
@@ -100,6 +114,13 @@ export function ChatArea({
               placeholder={config.placeholder}
               shape={config.composerShape}
               reply={reply}
+              attachmentsEnabled={attachmentsEnabled}
+              attachments={attachments}
+              attachmentError={attachmentError}
+              acceptFileTypes={acceptFileTypes}
+              onFilesPicked={onFilesPicked}
+              onRemoveAttachment={onRemoveAttachment}
+              agentName={config.agentName}
             />
           </footer>
         </div>
@@ -107,6 +128,13 @@ export function ChatArea({
     }
     return (
       <ChatLanding
+        attachmentsEnabled={attachmentsEnabled}
+        attachments={attachments}
+        attachmentError={attachmentError}
+        acceptFileTypes={acceptFileTypes}
+        onFilesPicked={onFilesPicked}
+        onRemoveAttachment={onRemoveAttachment}
+        agentName={config.agentName}
         fullscreen={false}
         title={config.title}
         subtitle={config.subtitle}
@@ -162,6 +190,13 @@ export function ChatArea({
           fullscreen={isFullscreen}
           shape={config.composerShape}
           reply={reply}
+          attachmentsEnabled={attachmentsEnabled}
+          attachments={attachments}
+          attachmentError={attachmentError}
+          acceptFileTypes={acceptFileTypes}
+          onFilesPicked={onFilesPicked}
+          onRemoveAttachment={onRemoveAttachment}
+          agentName={config.agentName}
         />
       </footer>
     </div>

@@ -73,6 +73,12 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
     resetChat,
     handleKeyDown,
     submitFeedback,
+    attachments,
+    attachmentError,
+    attachmentsEnabled,
+    acceptFileTypes,
+    addFiles,
+    removeAttachment,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -333,6 +339,12 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
             auditRevision={auditRevision}
             auditOpen={false}
             onChipClick={(text) => submitFromRenderer(text)}
+            attachments={attachments}
+            attachmentError={attachmentError}
+            attachmentsEnabled={attachmentsEnabled}
+            acceptFileTypes={acceptFileTypes}
+            onFilesPicked={addFiles}
+            onRemoveAttachment={removeAttachment}
           />
         )}
       </div>  {/* end ce-panel */}

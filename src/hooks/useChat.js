@@ -3,6 +3,9 @@ import { useConvEngineChatContext } from '../context/ConvEngineChatContext.jsx';
 import { stringifyPayload, extractEngineStatus } from '../utils/messagePayload.js';
 import { containsMarkdownTable } from '../utils/assistantContent.js';
 import { createClientId } from '../utils/uuid.js';
+import {
+  DEFAULT_MAX_FILES, DEFAULT_MAX_FILE_MB, readFileAsAttachment, rejectionReason,
+} from '../utils/attachments.js';
 
 // ── Stream helpers (mirrors convengine-ui App.jsx pattern) ────────────────────
 
@@ -107,6 +110,49 @@ export function useChat() {
   } = chatState;
 
   const [engineStatus, setEngineStatus] = useState(null);
+
+  // ── Attachments ───────────────────────────────────────────────────────────
+  // Held as raw File objects until send: reading them to base64 up front would
+  // hold several MB of string in state for a message the user may never send,
+  // and re-read them anyway if they add another. Read once, at send.
+  const [attachments, setAttachments]       = useState([]);
+  const [attachmentError, setAttachmentErr] = useState('');
+
+  const attachmentsEnabled = config.attachments?.enabled === true;
+  const acceptFileTypes    = config.attachments?.accept ?? '';
+  const maxFileSizeMb      = config.attachments?.maxFileSizeMb ?? DEFAULT_MAX_FILE_MB;
+  const maxFiles           = config.attachments?.maxFiles ?? DEFAULT_MAX_FILES;
+
+  const addFiles = useCallback((fileList) => {
+    const picked = Array.from(fileList ?? []);
+    if (!picked.length) return;
+    setAttachmentErr('');
+    setAttachments((current) => {
+      const next = [...current];
+      for (const file of picked) {
+        if (next.length >= maxFiles) {
+          setAttachmentErr(`You can attach at most ${maxFiles} file(s) per message.`);
+          break;
+        }
+        const reason = rejectionReason(file, { maxFileSizeMb, accept: acceptFileTypes });
+        if (reason) { setAttachmentErr(reason); continue; }
+        // Same name AND size twice is a double-click, not a second file.
+        if (next.some((f) => f.name === file.name && f.size === file.size)) continue;
+        next.push(file);
+      }
+      return next;
+    });
+  }, [acceptFileTypes, maxFileSizeMb, maxFiles]);
+
+  const removeAttachment = useCallback((index) => {
+    setAttachmentErr('');
+    setAttachments((current) => current.filter((_, i) => i !== index));
+  }, []);
+
+  const clearAttachments = useCallback(() => {
+    setAttachments([]);
+    setAttachmentErr('');
+  }, []);
 
   // ── Stream subscription ───────────────────────────────────────────────────
   // Mirrors convengine-ui App.jsx pattern:
@@ -238,7 +284,9 @@ export function useChat() {
   // ── Send a message ───────────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const userText = input.trim();
-    if (!userText || isTyping) return;
+    // A message carrying only files is legitimate — "here, look at this" — so
+    // the guard is "nothing at all to send", not "no text".
+    if ((!userText && attachments.length === 0) || isTyping) return;
 
     config.onMessage?.(userText);
     setInput('');
@@ -248,10 +296,18 @@ export function useChat() {
     const activeReply = replyContext
       ? { label: replyContext.label, text: replyContext.text, accent: replyContext.accent }
       : undefined;
+    const sentFiles = attachments.map((f) => ({ name: f.name, size: f.size }));
     setMessages((m) => [
       ...m,
-      { id: createClientId(), role: 'user', text: userText, reply: activeReply, sentAt: Date.now() },
+      {
+        id: createClientId(), role: 'user', text: userText, reply: activeReply,
+        // Rendered as chips on the sent bubble so the transcript records WHAT
+        // was attached, not just that something was.
+        files: sentFiles.length ? sentFiles : undefined,
+        sentAt: Date.now(),
+      },
     ]);
+    clearAttachments();
     // Reply-style: a reply pill is consumed by the next send (cleared here)
     // unless it opted into persist:true (e.g. a long-lived "current context").
     if (replyContext && !replyContext.persist) clearReplyContext();
@@ -277,7 +333,17 @@ export function useChat() {
             replySourceText: replyContext.replySourceText ?? replyContext.text,
           }
         : undefined;
-      const { apiText, inputParams } = await buildEnrichedPayload(userText, config.messageEnrichment, replyParams);
+      // Attachments ride on inputParams — the same channel every other
+      // per-message field uses — so a backend already reading inputParams
+      // needs no new endpoint and no multipart handling.
+      let fileParams;
+      if (attachments.length) {
+        const read = await Promise.all(attachments.map(readFileAsAttachment));
+        fileParams = { files: read };
+      }
+      const { apiText, inputParams } = await buildEnrichedPayload(
+        userText, config.messageEnrichment, { ...replyParams, ...fileParams },
+      );
       config.onSubmit?.({ userText, apiText, inputParams });
       const res = await apiClient.sendMessage(conversationId, apiText, inputParams);
       const elapsed = Math.round(performance.now() - _t0);
@@ -311,7 +377,8 @@ export function useChat() {
       // Micro-defer so the DOM has updated before we scroll
       requestAnimationFrame(scrollToBottom);
     }
-  }, [input, isTyping, conversationId, apiClient, config, replyContext, clearReplyContext, scrollToBottom]);
+  }, [input, isTyping, conversationId, apiClient, config, replyContext, clearReplyContext,
+      scrollToBottom, attachments, clearAttachments]);
 
   // ── Renderer-initiated send ─────────────────────────────────────────────
   /**
@@ -522,6 +589,11 @@ export function useChat() {
     isInitial,
     isMultiLine,
     replyContext,
+    // Attachments
+    attachments,
+    attachmentError,
+    attachmentsEnabled,
+    acceptFileTypes,
     // Refs
     threadRef,
     inputRef,
@@ -533,6 +605,9 @@ export function useChat() {
     prefillInput,
     setReplyContext,
     clearReplyContext,
+    addFiles,
+    removeAttachment,
+    clearAttachments,
     resetChat,
     handleKeyDown,
     submitFeedback,

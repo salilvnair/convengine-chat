@@ -221,6 +221,36 @@ export interface ConvEngineChatConfig {
   /** Pill (round) or rounded-rectangle (rect) composer input. @default 'round' */
   composerShape?: 'round' | 'rect';
 
+  /**
+   * Name shown next to the send button, so it is obvious WHICH agent answers.
+   * Omit to hide the label entirely.
+   */
+  agentName?: string;
+
+  /**
+   * File attachments. Off unless `enabled: true`.
+   *
+   * Picked files are read to base64 at SEND time and delivered on the existing
+   * `inputParams` channel as `inputParams.files` — no new endpoint, no
+   * multipart, no CORS change. A backend that doesn't read the key is
+   * unaffected.
+   *
+   *   inputParams.files: Array<{
+   *     name: string; mimeType: string; size: number;
+   *     content: string;      // base64, no data: prefix
+   *     encoding: 'base64';
+   *   }>
+   */
+  attachments?: {
+    enabled?: boolean;
+    /** Input `accept` string, e.g. ".csv,.xlsx,.pdf" or "image/*". */
+    accept?: string;
+    /** Per-file ceiling in MB. Default 10. */
+    maxFileSizeMb?: number;
+    /** Max files per message. Default 5. */
+    maxFiles?: number;
+  };
+
   // ── Color overrides ────────────────────────────────────────────────────────
   /** User message bubble fill. Overrides `--ce-bg-bubble-user`. */
   bubbleUserBg?: ColorValue;

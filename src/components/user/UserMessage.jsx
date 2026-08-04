@@ -2,6 +2,7 @@ import { useIcons } from '../../hooks/useIcons.js';
 import { bubbleShapeClass } from '../../utils/messageBubble.js';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
 import { formatTime } from '../../utils/dateFormat.js';
+import { formatBytes } from '../../utils/attachments.js';
 
 /** HH:mm:ss (24h) from a Unix ms timestamp — for debug chips only. */
 function fmtTime(ts) {
@@ -36,7 +37,28 @@ export function UserMessage({ bubble }) {
                 <span className="ce-bubble-reply-quote-text">{bubble.reply.text}</span>
               </span>
             )}
-            <span className="ce-bubble-text">{bubble.text}</span>
+            {bubble.files?.length > 0 && (
+              /* What was attached, recorded on the bubble itself — a
+                 transcript that says only "a file was sent" is useless when
+                 you scroll back to work out which one. */
+              <span className="ce-bubble-files">
+                {bubble.files.map((f, i) => (
+                  <span className="ce-bubble-file" key={`${f.name}-${i}`} title={f.name}>
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none"
+                         stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+                         strokeLinejoin="round" aria-hidden="true">
+                      <path d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5.5z" />
+                      <path d="M9 1.5v4h4" />
+                    </svg>
+                    <span className="ce-bubble-file-name">{f.name}</span>
+                    {f.size != null && (
+                      <span className="ce-bubble-file-size">{formatBytes(f.size)}</span>
+                    )}
+                  </span>
+                ))}
+              </span>
+            )}
+            {bubble.text && <span className="ce-bubble-text">{bubble.text}</span>}
           </div>
           {hasDebugChips && (
             <div className="ce-debug-chips" style={{ justifyContent: 'flex-end' }}>

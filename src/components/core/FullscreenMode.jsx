@@ -77,6 +77,12 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
     resetChat,
     handleKeyDown,
     submitFeedback,
+    attachments,
+    attachmentError,
+    attachmentsEnabled,
+    acceptFileTypes,
+    addFiles,
+    removeAttachment,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -207,6 +213,12 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
             auditOpen={false}
             engineStatus={engineStatus}
             onChipClick={(text) => submitFromRenderer(text)}
+            attachments={attachments}
+            attachmentError={attachmentError}
+            attachmentsEnabled={attachmentsEnabled}
+            acceptFileTypes={acceptFileTypes}
+            onFilesPicked={addFiles}
+            onRemoveAttachment={removeAttachment}
           />
         </div>
 

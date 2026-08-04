@@ -7,6 +7,13 @@ import { useIcons } from '../../hooks/useIcons.js';
  */
 export function ChatLanding({
   fullscreen = false,
+  attachments = [],
+  attachmentError = '',
+  attachmentsEnabled = false,
+  acceptFileTypes = '',
+  onFilesPicked,
+  onRemoveAttachment,
+  agentName = '',
   hideComposer = false,
   title = 'ConvEngine Assistant',
   subtitle = "Ask me anything — I'll do my best to help.",
@@ -57,6 +64,13 @@ export function ChatLanding({
   const composerEl = !hideComposer ? (
     <ChatComposer
       centered
+      attachmentsEnabled={attachmentsEnabled}
+      attachments={attachments}
+      attachmentError={attachmentError}
+      acceptFileTypes={acceptFileTypes}
+      onFilesPicked={onFilesPicked}
+      onRemoveAttachment={onRemoveAttachment}
+      agentName={agentName}
       fullscreen={fullscreen}
       inputRef={inputRef}
       input={input}

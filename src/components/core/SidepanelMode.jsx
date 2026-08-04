@@ -63,6 +63,12 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     handleKeyDown,
     submitFeedback,
     engineStatus,
+    attachments,
+    attachmentError,
+    attachmentsEnabled,
+    acceptFileTypes,
+    addFiles,
+    removeAttachment,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -258,6 +264,12 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
             auditOpen={auditOpen}
             onCloseAudit={() => setAuditOpen(false)}
             onChipClick={(text) => submitFromRenderer(text)}
+            attachments={attachments}
+            attachmentError={attachmentError}
+            attachmentsEnabled={attachmentsEnabled}
+            acceptFileTypes={acceptFileTypes}
+            onFilesPicked={addFiles}
+            onRemoveAttachment={removeAttachment}
           />
         </div>
       </>

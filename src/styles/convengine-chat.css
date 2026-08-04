@@ -2671,3 +2671,131 @@
   transition: none !important;
   animation:  none !important;
 }
+
+/* ── Attachments ─────────────────────────────────────────────────────────────
+   A toolbar UNDER the input (attach on the left, agent + send on the right),
+   which is where every coding assistant puts it, and file chips ABOVE the
+   input so they read as part of the message being composed. Everything here
+   uses the existing --ce-* tokens, so it inherits the host's theme rather
+   than introducing a second palette. */
+
+.ce-composer--has-toolbar { flex-wrap: wrap; }
+
+.ce-composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding-top: 6px;
+}
+.ce-composer-toolbar-spacer { flex: 1 1 auto; }
+
+.ce-composer-file-input { display: none; }
+
+.ce-composer-attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--ce-border, rgba(255, 255, 255, 0.16));
+  background: transparent;
+  color: var(--ce-text-muted, #9aa1ad);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.ce-composer-attach:hover:not(:disabled) {
+  color: var(--ce-accent, #d4a574);
+  border-color: var(--ce-accent, #d4a574);
+  background: color-mix(in srgb, var(--ce-accent, #d4a574) 12%, transparent);
+}
+.ce-composer-attach:disabled { opacity: .45; cursor: not-allowed; }
+
+/* The agent's name, so it's obvious WHO answers — sits next to send. */
+.ce-composer-agent {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ce-accent, #d4a574);
+  background: color-mix(in srgb, var(--ce-accent, #d4a574) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ce-accent, #d4a574) 34%, transparent);
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Pending attachments, above the input. */
+.ce-composer-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  padding-bottom: 6px;
+}
+.ce-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 6px 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--ce-text, #e9e7e2);
+  background: var(--ce-surface-2, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--ce-border, rgba(255, 255, 255, 0.14));
+}
+.ce-file-chip-icon { display: inline-flex; color: var(--ce-accent, #d4a574); flex: 0 0 auto; }
+.ce-file-chip-name {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ce-file-chip-size { color: var(--ce-text-muted, #9aa1ad); font-size: 11px; flex: 0 0 auto; }
+.ce-file-chip-x {
+  border: 0;
+  background: transparent;
+  color: var(--ce-text-muted, #9aa1ad);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+.ce-file-chip-x:hover { color: var(--ce-text, #e9e7e2); background: rgba(255, 255, 255, 0.08); }
+
+.ce-composer-file-error {
+  width: 100%;
+  font-size: 11.5px;
+  color: var(--ce-danger, #e0808f);
+  padding: 0 2px 6px;
+}
+
+/* Attachments recorded on a sent bubble. */
+.ce-bubble-files {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.ce-bubble-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  opacity: .92;
+}
+.ce-bubble-file-name {
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.ce-bubble-file-size { opacity: .7; }
