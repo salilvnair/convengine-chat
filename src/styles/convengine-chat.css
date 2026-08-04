@@ -2684,8 +2684,18 @@
 /* With a toolbar the composer is a STACK, not a box: files on top, the input
    box in the middle, the bar underneath. The shell gives up its own border and
    background — .ce-composer-field wears them instead — so the "+" and the agent
-   chip sit OUTSIDE the box rather than crowding the text being typed. */
-.ce-chat-root .ce-composer--has-toolbar {
+   chip sit OUTSIDE the box rather than crowding the text being typed.
+
+   SPECIFICITY MATTERS HERE. The mode rules are written as
+   `.ce-chat-root .ce-composer.ce-composer--fullscreen` (three classes) and the
+   dark ones add an attribute on top. A two-class override loses to them, the
+   shell keeps its rounded background, and the bar ends up sitting INSIDE a box
+   again — which is exactly what it looked like before this comment existed. So
+   every rule below doubles up on .ce-composer, and the dark-theme ones repeat
+   the attribute selector. */
+.ce-chat-root .ce-composer.ce-composer--has-toolbar,
+.ce-chat-root[data-ce-theme="dark"] .ce-composer.ce-composer--has-toolbar,
+.ce-chat-root .ce-landing--fullscreen .ce-composer.ce-composer--has-toolbar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -2696,14 +2706,17 @@
   padding: 0;
   border-radius: 0;
   min-height: 0;
+  width: 100%;
+  max-width: none;
 }
-.ce-chat-root .ce-composer--has-toolbar:focus-within {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar:focus-within,
+.ce-chat-root[data-ce-theme="dark"] .ce-composer.ce-composer--has-toolbar:focus-within {
   border-color: transparent;
   box-shadow: none;
 }
 
 /* The input box itself — a rounded RECTANGLE, not a pill. */
-.ce-chat-root .ce-composer--has-toolbar .ce-composer-field {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-field {
   position: relative;
   display: flex;
   align-items: center;
@@ -2712,29 +2725,39 @@
   background: var(--ce-bg-composer-surface, var(--ce-bg-composer));
   border: 1.5px solid var(--ce-border-color);
   border-radius: 14px;
-  padding: var(--ce-composer-pad-y) var(--ce-composer-pad-r) var(--ce-composer-pad-y) var(--ce-composer-pad-l);
+  padding: var(--ce-composer-pad-y) 46px var(--ce-composer-pad-y) var(--ce-composer-pad-l);
   transition: border-color var(--ce-transition-fast), box-shadow var(--ce-transition-fast);
 }
-.ce-chat-root .ce-composer--has-toolbar .ce-composer-field:focus-within {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-field:focus-within {
   border-color: var(--ce-color-accent);
   box-shadow: 0 0 0 3px var(--ce-color-accent-light);
 }
+/* Fullscreen sizes the text up; keep that, drop the shell's own padding since
+   the field owns the box now. */
+.ce-chat-root .ce-composer.ce-composer--fullscreen.ce-composer--has-toolbar .ce-composer-field {
+  min-height: 52px;
+}
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-input {
+  display: block;
+  width: 100%;
+}
 /* Send stays inside the box, anchored right — the bar below is for controls
    that aren't part of sending. */
-.ce-chat-root .ce-composer--has-toolbar .ce-composer-send {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-send {
   position: absolute;
   right: 8px;
   top: 50%;
+  bottom: auto;
   transform: translateY(-50%);
 }
-.ce-chat-root .ce-composer--has-toolbar .ce-composer-send:hover:not(:disabled) {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-send:hover:not(:disabled) {
   transform: translateY(-50%) scale(1.06);
 }
-.ce-chat-root .ce-composer--has-toolbar .ce-composer-send:disabled {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-send:disabled {
   transform: translateY(-50%);
 }
 /* A reply pill inside the box stacks above the textarea. */
-.ce-chat-root .ce-composer--has-toolbar .ce-composer-field:has(.ce-composer-reply) {
+.ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-field:has(.ce-composer-reply) {
   flex-direction: column;
   align-items: stretch;
 }
