@@ -65,6 +65,23 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       // The built-in FAB launcher (panel mode). Set false when you drive `open`
       // from your own trigger and don't want the library's floating button.
       showFab:               config.showFab               ?? true,
+      // ── Draggable orb (panel mode) ───────────────────────────────────────
+      // When the `draggable` prop is set on <ConvEngineChat>, the FAB becomes
+      // a free-floating orb the user can drag anywhere on the page.
+      // orbMovement: 'edgeSnap' (default) — release snaps to the nearest
+      //   left/right edge, iOS AssistiveTouch style.
+      // 'freeform' — the orb stays exactly wherever it's released; it can
+      //   rest anywhere on the page, not just the edges.
+      orbMovement:           config.orbMovement           ?? 'edgeSnap',
+      // orbAnimation — named drag/snap animation style. 'bubblegum' (default)
+      // is the springy squash-and-stretch original; 'none' disables all
+      // animation for an instant, non-animated reposition. See
+      // src/utils/orbAnimations.js for the full catalog (10 named styles).
+      orbAnimation:          config.orbAnimation          ?? 'bubblegum',
+      // Remembers the orb's last dropped position across reloads via
+      // localStorage. Set false to always start from the default corner.
+      persistOrbPosition:    config.persistOrbPosition    ?? true,
+      orbStorageKey:         config.orbStorageKey         ?? 'ce-chat-orb-pos',
       showEngineStatus:      config.showEngineStatus      ?? true,
       // Reply-to-message affordance on assistant bubbles (Reply-style). The
       // reply icon appears on hover; clicking it quotes that bubble in the

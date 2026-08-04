@@ -51,6 +51,15 @@ function isSolidColorToken(value) {
  * @param {"right"|"left"} [props.align="right"]
  *   Horizontal anchor for panel mode.
  *
+ * @param {boolean} [props.draggable=false]
+ *   Panel mode only. Turns the FAB into a free-floating orb the user can
+ *   drag anywhere on the page — it snaps to the nearest left/right edge on
+ *   release (iOS AssistiveTouch style). The chat panel re-anchors itself
+ *   next to wherever the orb is dropped. See `config.orbAnimation` and
+ *   `config.orbMovement` for the drag/snap animation and
+ *   `config.persistOrbPosition` to remember the last dropped spot across
+ *   reloads.
+ *
  * @param {"xs"|"sm"|"md"|"lg"} [props.size="md"]
  *   Overall scale of the widget — panel dimensions, font, bubbles, composer,
  *   avatars and the send button all shrink/grow together. `md` is the default
@@ -101,6 +110,7 @@ export function ConvEngineChat({
   position = 'bottom',
   align = 'right',
   size = 'md',
+  draggable = false,
   config = {},
   theme = {},
   onModeChange,
@@ -203,6 +213,7 @@ export function ConvEngineChat({
           <PanelMode
             position={position}
             align={align}
+            draggable={draggable}
             isDark={isDark}
             toggleTheme={toggleTheme}
             onModeChange={handleModeChange}

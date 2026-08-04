@@ -204,6 +204,23 @@ export interface ConvEngineChatConfig {
   /** The built-in FAB launcher (panel mode). Set `false` when you drive `open`
    *  from your own trigger. @default true */
   showFab?: boolean;
+  /** Panel mode + `draggable` prop only. How the orb behaves when released:
+   *  - `'edgeSnap'`  — snaps to the nearest left/right edge (iOS AssistiveTouch style)
+   *  - `'freeform'`  — stays exactly wherever it's dropped, anywhere on the page
+   *  @default 'edgeSnap' */
+  orbMovement?: 'edgeSnap' | 'freeform';
+  /** Panel mode + `draggable` prop only. Named drag/snap animation style.
+   *  `'none'` disables all animation for an instant, non-animated reposition.
+   *  @default 'bubblegum' */
+  orbAnimation?: 'none' | 'bubblegum' | 'smooth' | 'glide' | 'spring' | 'elastic'
+    | 'rubberband' | 'jelly' | 'wobble' | 'pop' | 'magnetic';
+  /** Panel mode + `draggable` prop only. Remembers the orb's last dropped
+   *  position across reloads via localStorage. @default true */
+  persistOrbPosition?: boolean;
+  /** Panel mode + `draggable` prop only. localStorage key used to persist the
+   *  orb's dropped position — customize when several draggable widgets share
+   *  one page. @default 'ce-chat-orb-pos' */
+  orbStorageKey?: string;
   /** "Open fullscreen in a new tab" — a URL the widget opens in a new browser
    *  tab. When set (or `onOpenFullscreenTab` is), the layout picker gains a
    *  "Fullscreen (new tab)" option and fullscreen mode gains a header button. */
@@ -412,6 +429,11 @@ export interface ConvEngineChatProps {
    *  and the send button scale together. `md` is unchanged; `sm`/`xs` are
    *  compact; `lg` is roomier. @default 'md' */
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  /** Panel mode only. Turns the FAB into a free-floating orb the user can drag
+   *  anywhere on the page; the panel re-anchors next to it. Tune with
+   *  `config.orbMovement`, `config.orbAnimation` and `config.persistOrbPosition`.
+   *  @default false */
+  draggable?: boolean;
   /** Consumer content rendered in a slot directly below the header and above
    *  the chat body (every mode) — e.g. a conversation-history dropdown, a
    *  banner, or nothing. The library supplies only a flex-shrink wrapper. */

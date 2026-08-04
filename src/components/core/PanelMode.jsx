@@ -6,6 +6,7 @@ import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatHeader } from '../core/ChatHeader.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
 import { hasFullscreenTab, openFullscreenTab } from '../../utils/fullscreenTab.js';
+import { resolveOrbAnimation, dragTransform } from '../../utils/orbAnimations.js';
 
 /**
  * Panel mode — a floating FAB button that opens a chat panel anchored to a
@@ -15,7 +16,7 @@ import { hasFullscreenTab, openFullscreenTab } from '../../utils/fullscreenTab.j
  *   position  "bottom" | "top"    (default: "bottom")
  *   align     "right"  | "left"   (default: "right")
  */
-export function PanelMode({ position = 'bottom', align = 'right', isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null, subHeader = null, open, onOpenChange }) {
+export function PanelMode({ position = 'bottom', align = 'right', draggable = false, isDark, toggleTheme, onModeChange, initialOpen = false, actionsRef = null, subHeader = null, open, onOpenChange }) {
   const { config } = useConvEngineChatContext();
   // Controlled vs uncontrolled open: when `open` is provided, the consumer owns
   // the open state (e.g. drives it from its own launcher) — otherwise the FAB
@@ -39,6 +40,194 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
   const [modeMenuOpen,    setModeMenuOpen]    = useState(false);
   const modeMenuRef = useRef(null);
   const dragRef     = useRef({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+
+  // ── Draggable orb (movable FAB) ───────────────────────────────────────────
+  const orbMovement        = config.orbMovement        ?? 'edgeSnap'; // 'edgeSnap' | 'freeform'
+  const orbAnim            = resolveOrbAnimation(config.orbAnimation ?? 'bubblegum');
+  const persistOrbPosition = config.persistOrbPosition ?? true;
+  const orbStorageKey      = config.orbStorageKey      ?? 'ce-chat-orb-pos';
+  const fabRef        = useRef(null);
+  const [orbPos,       setOrbPos]       = useState(null); // { x, y } fixed-position px, once dragged/loaded
+  const [orbDragging,  setOrbDragging]  = useState(false);
+  const [orbSquish,    setOrbSquish]    = useState({ x: 0, y: 0 });
+  const orbDragRef = useRef({ active: false, dragged: false, startX: 0, startY: 0, origX: 0, origY: 0, lastX: 0, lastY: 0, lastT: 0 });
+  const ORB_MARGIN = 16;
+
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+  // Seed the orb's starting position: restore from localStorage, else measure
+  // the CSS-anchored corner position so the first paint matches the static
+  // (non-draggable) FAB exactly — no flash/jump.
+  useEffect(() => {
+    if (!draggable) return;
+    let seeded = false;
+    if (persistOrbPosition) {
+      try {
+        const raw = localStorage.getItem(orbStorageKey);
+        if (raw) {
+          const saved = JSON.parse(raw);
+          if (saved && typeof saved.x === 'number' && typeof saved.y === 'number' && fabRef.current) {
+            const fs = fabRef.current.offsetWidth || 52;
+            setOrbPos({
+              x: clamp(saved.x, ORB_MARGIN, window.innerWidth  - fs - ORB_MARGIN),
+              y: clamp(saved.y, ORB_MARGIN, window.innerHeight - fs - ORB_MARGIN),
+            });
+            seeded = true;
+          }
+        }
+      } catch { /* ignore corrupt/unavailable storage */ }
+    }
+    if (!seeded && fabRef.current) {
+      const rect = fabRef.current.getBoundingClientRect();
+      setOrbPos({ x: rect.left, y: rect.top });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggable]);
+
+  // Keep the orb on-screen if the viewport resizes.
+  useEffect(() => {
+    if (!draggable) return;
+    function handleResize() {
+      setOrbPos((pos) => {
+        if (!pos || !fabRef.current) return pos;
+        const fs = fabRef.current.offsetWidth || 52;
+        return {
+          x: clamp(pos.x, ORB_MARGIN, window.innerWidth  - fs - ORB_MARGIN),
+          y: clamp(pos.y, ORB_MARGIN, window.innerHeight - fs - ORB_MARGIN),
+        };
+      });
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [draggable]);
+
+  function persistOrbPos(pos) {
+    if (!persistOrbPosition) return;
+    try { localStorage.setItem(orbStorageKey, JSON.stringify(pos)); } catch { /* ignore */ }
+  }
+
+  function handleOrbPointerDown(e) {
+    if (!draggable || !fabRef.current) return;
+    const rect = fabRef.current.getBoundingClientRect();
+    orbDragRef.current = {
+      active: true, dragged: false,
+      startX: e.clientX, startY: e.clientY,
+      origX: rect.left,  origY: rect.top,
+      lastX: e.clientX,  lastY: e.clientY, lastT: performance.now(),
+    };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function handleOrbPointerMove(e) {
+    const d = orbDragRef.current;
+    if (!d.active || !fabRef.current) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.dragged && Math.hypot(dx, dy) > 4) {
+      d.dragged = true;
+      setOrbDragging(true);
+    }
+    if (!d.dragged) return;
+
+    const fs = fabRef.current.offsetWidth || 52;
+    const nx = clamp(d.origX + dx, ORB_MARGIN, window.innerWidth  - fs - ORB_MARGIN);
+    const ny = clamp(d.origY + dy, ORB_MARGIN, window.innerHeight - fs - ORB_MARGIN);
+    setOrbPos({ x: nx, y: ny });
+
+    if (orbAnim.squish > 0 || orbAnim.rotateSquish) {
+      const now = performance.now();
+      const dt  = Math.max(now - d.lastT, 1);
+      const vx  = (e.clientX - d.lastX) / dt;
+      const vy  = (e.clientY - d.lastY) / dt;
+      d.lastX = e.clientX; d.lastY = e.clientY; d.lastT = now;
+      setOrbSquish({ x: clamp(vx * 18, -12, 12), y: clamp(vy * 18, -12, 12) });
+    }
+  }
+
+  // Plays the preset's one-shot "settle" keyframe (bounce/wobble/pop) once
+  // the orb lands. Applied imperatively via a reflow restart so it replays
+  // identically on every drop, then cleared so React's own styles (hover,
+  // active, etc.) stay in control afterwards.
+  function triggerSettle() {
+    const el = fabRef.current;
+    const kf = orbAnim.settleKeyframe;
+    if (!el || !kf) return;
+    el.style.animation = 'none';
+    void el.offsetWidth; // force reflow so the animation restarts from scratch
+    el.style.animation = `${kf.name} ${kf.duration}ms ease`;
+    window.setTimeout(() => { if (el) el.style.animation = ''; }, kf.duration + 50);
+  }
+
+  function handleOrbPointerUp() {
+    const d = orbDragRef.current;
+    if (!d.active) return;
+    d.active = false;
+    setOrbDragging(false);
+    setOrbSquish({ x: 0, y: 0 });
+    if (d.dragged && fabRef.current) {
+      const fs = fabRef.current.offsetWidth || 52;
+      setOrbPos((pos) => {
+        if (!pos) return pos;
+        const next = orbMovement === 'freeform'
+          ? pos
+          : { x: (pos.x + fs / 2 < window.innerWidth / 2) ? ORB_MARGIN : window.innerWidth - fs - ORB_MARGIN, y: pos.y };
+        persistOrbPos(next);
+        return next;
+      });
+      triggerSettle();
+    }
+  }
+
+  // A drag that actually moved the orb should not also toggle the panel open.
+  function handleOrbClick(e) {
+    if (orbDragRef.current.dragged) {
+      orbDragRef.current.dragged = false;
+      e.preventDefault();
+      return;
+    }
+    if (isOpen) {
+      setIsOpen(false);
+      setIsMinimized(false);
+      setIsPopout(false);
+    } else {
+      setIsOpen(true);
+      setIsMinimized(false);
+    }
+  }
+
+  const orbFabStyle = (draggable && orbPos) ? {
+    left: orbPos.x, top: orbPos.y, right: 'auto', bottom: 'auto',
+    transition: orbDragging || orbAnim.dropDuration === 0
+      ? 'none'
+      : `left ${orbAnim.dropDuration}ms ${orbAnim.dropEasing}, top ${orbAnim.dropDuration}ms ${orbAnim.dropEasing}`,
+    ...(orbDragging ? { transform: dragTransform(orbAnim, orbSquish) } : {}),
+  } : undefined;
+
+  // Panel re-anchors next to the orb's current position instead of the
+  // static corner classes, once the orb has been placed somewhere.
+  const orbPanelStyle = useMemo(() => {
+    if (!draggable || !orbPos || typeof window === 'undefined') return {};
+    const fs = fabRef.current?.offsetWidth ?? 52;
+    const gap = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const style = { position: 'fixed' };
+    const onLeft = (orbPos.x + fs / 2) < vw / 2;
+    if (onLeft) style.left = Math.max(ORB_MARGIN, orbPos.x);
+    else        style.right = Math.max(ORB_MARGIN, vw - (orbPos.x + fs));
+
+    const minPanelHeight = 320;
+    const spaceBelow = vh - (orbPos.y + fs + gap);
+    const opensBelow = spaceBelow >= minPanelHeight;
+    if (opensBelow) style.top = orbPos.y + fs + gap;
+    else style.bottom = Math.max(ORB_MARGIN, vh - orbPos.y + gap);
+
+    // Zoom the panel in from whichever corner of it sits nearest the orb.
+    style.transformOrigin = `${opensBelow ? 'top' : 'bottom'} ${onLeft ? 'left' : 'right'}`;
+
+    return style;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggable, orbPos]);
 
   // Close mode menu on outside click
   useEffect(() => {
@@ -285,7 +474,7 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
       {/* ── Floating chat panel ───────────────────────────────────────────── */}
       <div
         className={`ce-panel ${posClass} ${alignClass} ${panelStateClass} ${config.showFab === false ? 'ce-panel--nofab' : ''}`}
-        style={popoutStyle}
+        style={{ ...orbPanelStyle, ...popoutStyle }}
         role="dialog"
         aria-modal="false"
         aria-label="Chat panel"
@@ -353,13 +542,19 @@ export function PanelMode({ position = 'bottom', align = 'right', isDark, toggle
           trigger via config.showFab:false (e.g. drives `open` externally). ── */}
       {config.showFab !== false && (
         <button
+          ref={fabRef}
           type="button"
-          className={`ce-fab ${fabPosClass} ${fabAlignClass} ${isOpen ? 'ce-fab--active' : ''}`}
+          className={`ce-fab ${fabPosClass} ${fabAlignClass} ${isOpen ? 'ce-fab--active' : ''} ${draggable ? 'ce-fab--draggable' : ''} ${orbDragging ? 'ce-fab--dragging' : ''}`}
           title={isOpen ? 'Close chat' : 'Open chat'}
           aria-label={isOpen ? 'Close chat' : 'Open chat'}
           aria-expanded={isOpen}
           aria-controls="ce-chat-panel"
-          onClick={() => {
+          style={orbFabStyle}
+          onPointerDown={draggable ? handleOrbPointerDown : undefined}
+          onPointerMove={draggable ? handleOrbPointerMove : undefined}
+          onPointerUp={draggable ? handleOrbPointerUp : undefined}
+          onPointerCancel={draggable ? handleOrbPointerUp : undefined}
+          onClick={draggable ? handleOrbClick : () => {
             if (isOpen) {
               setIsOpen(false);
               setIsMinimized(false);
