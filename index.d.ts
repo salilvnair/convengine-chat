@@ -31,9 +31,22 @@ export interface RendererDefinition {
   key: string;
   /** Higher priority runs before built-ins (built-in priority = 100) */
   priority?: number;
-  /** Return true when this renderer should handle a message */
+  /**
+   * Return true when this renderer should handle a message.
+   *
+   * NOTE the asymmetry: `match` receives the CONTEXT (`{ rawText, payload,
+   * effectiveType }`) while `Component` receives the payload itself. Reading a
+   * payload field straight off the context — `ctx.myField` rather than
+   * `ctx.payload.myField` — is undefined at runtime, so the renderer never
+   * fires and a lower-priority one answers instead. Nothing throws, and
+   * RendererContext's index signature means TypeScript won't flag it either,
+   * so the only symptom is a card that silently isn't there.
+   */
   match: (ctx: RendererContext) => boolean;
   Component: React.ComponentType<RendererComponentProps>;
+  /** Skip the default speech-bubble shell and let the renderer own its whole
+   *  container — for cards that supply their own border, padding and radius. */
+  hideBubble?: boolean;
 }
 
 // ── Custom icons ──────────────────────────────────────────────────────────────
