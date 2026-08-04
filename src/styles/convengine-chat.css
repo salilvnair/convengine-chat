@@ -376,12 +376,12 @@
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: #2a4a6d;
+  background: var(--ce-color-accent);
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.24);
 }
 
 .ce-chat-root .ce-composer--fullscreen .ce-composer-send:hover:not(:disabled) {
-  background: #1a416a;
+  background: var(--ce-color-accent-hover);
   transform: translateY(-50%) scale(1.06);
 }
 
