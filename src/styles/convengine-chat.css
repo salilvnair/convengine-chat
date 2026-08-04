@@ -2809,6 +2809,43 @@
 .ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-send:disabled {
   transform: translateY(-50%);
 }
+/* …but once the textarea grows, send drops to the BOTTOM of the box, the way
+   it always did before the toolbar existed.
+
+   Specificity, again: the --multiline rules further up are two classes deep
+   (.ce-composer--multiline .ce-composer-send) while the has-toolbar rule right
+   above is three. So the moment a toolbar was present — attachments on, or an
+   agentName set, which is most consumers — has-toolbar won and pinned the
+   button to top: 50%. It stayed vertically centred while the box grew down
+   past it. Every mode uses this one composer, so it looked broken everywhere
+   at once. Match the class count to take it back. */
+.ce-chat-root .ce-composer.ce-composer--has-toolbar.ce-composer--multiline .ce-composer-send {
+  top: auto;
+  /* Same inset from the bottom as the text has from the field's edge. */
+  bottom: var(--ce-composer-pad-y);
+  transform: none;
+}
+.ce-chat-root .ce-composer.ce-composer--has-toolbar.ce-composer--multiline .ce-composer-send:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+.ce-chat-root .ce-composer.ce-composer--has-toolbar.ce-composer--multiline .ce-composer-send:disabled {
+  transform: none;
+}
+/* Same story for a reply pill: it stacks ABOVE the textarea inside the box, so
+   a vertically centred send button lands on the pill's own clear (×) button
+   instead of next to the text. --has-reply already anchors send to the bottom,
+   but at two classes it lost to has-toolbar the same way. */
+.ce-chat-root .ce-composer.ce-composer--has-toolbar.ce-composer--has-reply .ce-composer-send {
+  top: auto;
+  bottom: var(--ce-composer-pad-y);
+  transform: none;
+}
+.ce-chat-root .ce-composer.ce-composer--has-toolbar.ce-composer--has-reply .ce-composer-send:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+.ce-chat-root .ce-composer.ce-composer--has-toolbar.ce-composer--has-reply .ce-composer-send:disabled {
+  transform: none;
+}
 /* A reply pill inside the box stacks above the textarea. */
 .ce-chat-root .ce-composer.ce-composer--has-toolbar .ce-composer-field:has(.ce-composer-reply) {
   flex-direction: column;
