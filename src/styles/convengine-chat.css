@@ -2681,48 +2681,110 @@
 
 .ce-composer--has-toolbar { flex-wrap: wrap; }
 
-.ce-composer-toolbar {
+/* With a toolbar the composer is a STACK, not a box: files on top, the input
+   box in the middle, the bar underneath. The shell gives up its own border and
+   background — .ce-composer-field wears them instead — so the "+" and the agent
+   chip sit OUTSIDE the box rather than crowding the text being typed. */
+.ce-chat-root .ce-composer--has-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  min-height: 0;
+}
+.ce-chat-root .ce-composer--has-toolbar:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* The input box itself — a rounded RECTANGLE, not a pill. */
+.ce-chat-root .ce-composer--has-toolbar .ce-composer-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--ce-composer-min-h);
+  background: var(--ce-bg-composer-surface, var(--ce-bg-composer));
+  border: 1.5px solid var(--ce-border-color);
+  border-radius: 14px;
+  padding: var(--ce-composer-pad-y) var(--ce-composer-pad-r) var(--ce-composer-pad-y) var(--ce-composer-pad-l);
+  transition: border-color var(--ce-transition-fast), box-shadow var(--ce-transition-fast);
+}
+.ce-chat-root .ce-composer--has-toolbar .ce-composer-field:focus-within {
+  border-color: var(--ce-color-accent);
+  box-shadow: 0 0 0 3px var(--ce-color-accent-light);
+}
+/* Send stays inside the box, anchored right — the bar below is for controls
+   that aren't part of sending. */
+.ce-chat-root .ce-composer--has-toolbar .ce-composer-send {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.ce-chat-root .ce-composer--has-toolbar .ce-composer-send:hover:not(:disabled) {
+  transform: translateY(-50%) scale(1.06);
+}
+.ce-chat-root .ce-composer--has-toolbar .ce-composer-send:disabled {
+  transform: translateY(-50%);
+}
+/* A reply pill inside the box stacks above the textarea. */
+.ce-chat-root .ce-composer--has-toolbar .ce-composer-field:has(.ce-composer-reply) {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* The bar under the box: + on the left, agent chip on the right. */
+.ce-composer-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding-top: 6px;
+  padding: 0 2px;
 }
-.ce-composer-toolbar-spacer { flex: 1 1 auto; }
+.ce-composer-bar-spacer { flex: 1 1 auto; }
 
 .ce-composer-file-input { display: none; }
 
+/* Bare glyph — no ring, no filled circle. A bordered puck here reads as a
+   second send button sitting next to the real one. */
 .ce-composer-attach {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
   flex: 0 0 auto;
-  border-radius: 50%;
-  border: 1px solid var(--ce-border, rgba(255, 255, 255, 0.16));
+  border: none;
+  border-radius: 5px;
   background: transparent;
-  color: var(--ce-text-muted, #9aa1ad);
+  color: var(--ce-text-secondary);
   cursor: pointer;
-  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  transition: color .15s ease, background .15s ease;
 }
 .ce-composer-attach:hover:not(:disabled) {
-  color: var(--ce-accent, #d4a574);
-  border-color: var(--ce-accent, #d4a574);
-  background: color-mix(in srgb, var(--ce-accent, #d4a574) 12%, transparent);
+  color: var(--ce-color-accent);
+  background: color-mix(in srgb, var(--ce-color-accent) 14%, transparent);
 }
 .ce-composer-attach:disabled { opacity: .45; cursor: not-allowed; }
 
 /* The agent's name, so it's obvious WHO answers — sits next to send. */
 .ce-composer-agent {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: .04em;
-  color: var(--ce-accent, #d4a574);
-  background: color-mix(in srgb, var(--ce-accent, #d4a574) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ce-accent, #d4a574) 34%, transparent);
-  border-radius: 20px;
-  padding: 3px 10px;
+  line-height: 1.4;
+  color: var(--ce-color-accent);
+  background: color-mix(in srgb, var(--ce-color-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ce-color-accent) 28%, transparent);
+  border-radius: 5px;
+  padding: 1px 6px;
   white-space: nowrap;
   max-width: 45%;
   overflow: hidden;
@@ -2740,27 +2802,27 @@
 .ce-file-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   max-width: 100%;
-  padding: 4px 6px 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--ce-text, #e9e7e2);
-  background: var(--ce-surface-2, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--ce-border, rgba(255, 255, 255, 0.14));
+  padding: 2px 4px 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--ce-text-primary);
+  background: var(--ce-bg-composer-surface);
+  border: 1px solid var(--ce-border-color);
 }
-.ce-file-chip-icon { display: inline-flex; color: var(--ce-accent, #d4a574); flex: 0 0 auto; }
+.ce-file-chip-icon { display: inline-flex; color: var(--ce-color-accent); flex: 0 0 auto; }
 .ce-file-chip-name {
-  max-width: 190px;
+  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ce-file-chip-size { color: var(--ce-text-muted, #9aa1ad); font-size: 11px; flex: 0 0 auto; }
+.ce-file-chip-size { color: var(--ce-text-secondary); font-size: 10px; flex: 0 0 auto; }
 .ce-file-chip-x {
   border: 0;
   background: transparent;
-  color: var(--ce-text-muted, #9aa1ad);
+  color: var(--ce-text-secondary);
   cursor: pointer;
   font-size: 11px;
   line-height: 1;
@@ -2768,7 +2830,7 @@
   border-radius: 4px;
   flex: 0 0 auto;
 }
-.ce-file-chip-x:hover { color: var(--ce-text, #e9e7e2); background: rgba(255, 255, 255, 0.08); }
+.ce-file-chip-x:hover { color: var(--ce-text-primary); background: color-mix(in srgb, var(--ce-text-primary) 10%, transparent); }
 
 .ce-composer-file-error {
   width: 100%;

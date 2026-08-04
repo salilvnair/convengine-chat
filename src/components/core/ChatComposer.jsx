@@ -66,9 +66,7 @@ export function ChatComposer({
 
   const replyClickable = reply && typeof reply.onClick === 'function';
 
-  return (
-    <div className={composerClass}>
-      {reply && (
+  const replyNode = reply && (
         <div
           className="ce-composer-reply"
           style={reply.accent ? { '--ce-reply-accent': reply.accent } : undefined}
@@ -98,8 +96,11 @@ export function ChatComposer({
             </button>
           )}
         </div>
-      )}
-      {attachments.length > 0 && (
+  );
+
+  // Picked files sit ABOVE the box, wrapping across its full width — they are
+  // part of the message you are still writing, not something already sent.
+  const filesNode = attachments.length > 0 && (
         <div className="ce-composer-files">
           {attachments.map((file, i) => (
             <span className="ce-file-chip" key={`${file.name}-${i}`} title={file.name}>
@@ -125,12 +126,14 @@ export function ChatComposer({
             </span>
           ))}
         </div>
-      )}
+  );
 
-      {attachmentError && (
-        <div className="ce-composer-file-error" role="alert">{attachmentError}</div>
-      )}
+  const errorNode = attachmentError && (
+    <div className="ce-composer-file-error" role="alert">{attachmentError}</div>
+  );
 
+  const fieldNode = (
+    <>
       <textarea
         ref={inputRef}
         className="ce-composer-input"
@@ -144,64 +147,79 @@ export function ChatComposer({
         aria-multiline="true"
       />
 
-      {showToolbar ? (
-        <div className="ce-composer-toolbar">
-          {attachmentsEnabled && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept={acceptFileTypes || undefined}
-                className="ce-composer-file-input"
-                onChange={(e) => {
-                  onFilesPicked?.(e.target.files);
-                  // Reset so picking the SAME file again still fires change.
-                  if (fileInputRef.current) fileInputRef.current.value = '';
-                }}
-                tabIndex={-1}
-                aria-hidden="true"
-              />
-              <button
-                type="button"
-                className="ce-composer-attach"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isTyping}
-                title="Attach files"
-                aria-label="Attach files"
-              >
-                <svg viewBox="0 0 16 16" width="15" height="15" fill="none"
-                     stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                  <path d="M8 3.5v9M3.5 8h9" />
-                </svg>
-              </button>
-            </>
-          )}
-          <span className="ce-composer-toolbar-spacer" />
-          {agentName && <span className="ce-composer-agent">{agentName}</span>}
-          <button
-            type="button"
-            className="ce-composer-send"
-            onClick={onSend}
-            disabled={isTyping || (!input.trim() && attachments.length === 0)}
-            title="Send message"
-            aria-label="Send message"
-          >
-            <SendIcon />
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="ce-composer-send"
-          onClick={onSend}
-          disabled={isTyping || !input.trim()}
-          title="Send message"
-          aria-label="Send message"
-        >
-          <SendIcon />
-        </button>
-      )}
+      <button
+        type="button"
+        className="ce-composer-send"
+        onClick={onSend}
+        disabled={isTyping || (!input.trim() && attachments.length === 0)}
+        title="Send message"
+        aria-label="Send message"
+      >
+        <SendIcon />
+      </button>
+    </>
+  );
+
+  // No toolbar: the original single-box composer, byte for byte. Consumers that
+  // never turn attachments on keep exactly the markup and CSS they had.
+  if (!showToolbar) {
+    return (
+      <div className={composerClass}>
+        {replyNode}
+        {filesNode}
+        {errorNode}
+        {fieldNode}
+      </div>
+    );
+  }
+
+  // With a toolbar the composer becomes a STACK: picked files, then the input
+  // box, then a bar beneath it. The bar is deliberately outside the box —
+  // inside, the "+" and the agent name crowd the text you're typing and the
+  // box has to grow to fit controls that aren't part of the message.
+  return (
+    <div className={composerClass}>
+      {filesNode}
+      {errorNode}
+      <div className="ce-composer-field">
+        {replyNode}
+        {fieldNode}
+      </div>
+      <div className="ce-composer-bar">
+        {attachmentsEnabled && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={acceptFileTypes || undefined}
+              className="ce-composer-file-input"
+              onChange={(e) => {
+                onFilesPicked?.(e.target.files);
+                // Reset so picking the SAME file again still fires change.
+                if (fileInputRef.current) fileInputRef.current.value = '';
+              }}
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              className="ce-composer-attach"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isTyping}
+              title="Attach files"
+              aria-label="Attach files"
+            >
+              <svg viewBox="0 0 18 18" width="16" height="16" fill="none"
+                   stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M9 3.75v10.5M3.75 9h10.5" />
+              </svg>
+            </button>
+          </>
+        )}
+        <span className="ce-composer-bar-spacer" />
+        {agentName && <span className="ce-composer-agent">{agentName}</span>}
+      </div>
     </div>
   );
 }
