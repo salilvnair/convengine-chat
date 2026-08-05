@@ -15,6 +15,8 @@ const ConvEngineChatContext = createContext(null);
  *
  * @param {{ config: import('../index.js').ConvEngineChatConfig, children: React.ReactNode }} props
  */
+/** Config keys the library reads under a different name than it stores.
+ *  Add here when you rename an input — see the unknown-key warning below. */
 export function ConvEngineChatProvider({ config = {}, children }) {
   // Stable conversation ID: use caller-provided one or auto-generate once.
   const conversationId = useMemo(
@@ -38,8 +40,36 @@ export function ConvEngineChatProvider({ config = {}, children }) {
     [streamEnabled, config.apiHost, JSON.stringify(config.stream)],
   );
 
+  // Normalising the consumer's config = defaults + coercions. The literal
+  // below lists a key ONLY because it needs a default; it is not, and must
+  // not be, the set of keys the library supports.
+  //
+  // It used to be both, and that made it an allowlist: anything not listed
+  // was dropped on the way in. A config option therefore took TWO edits in
+  // two files — implement it where it's read, register it here — and doing
+  // only the first made the option vanish silently. No error, no warning,
+  // nothing visible in a devtools diff, because the object the components
+  // saw was never the one the consumer passed. The feature just never fired.
+  //
+  // That has now cost three separate integrations (`attachments`,
+  // `agentName`, `onNewChat`), each found the same way: someone driving the
+  // real UI wondering why nothing happened. So `...config` goes first —
+  // every key the consumer passed survives, and the entries below override
+  // only what they actually normalise. A new option works the moment it is
+  // read somewhere, with no second edit that can be forgotten.
+  //
+  // A dev warning for keys nothing recognises was built and then removed. It
+  // needs a set of every supported key, and there is no runtime source for
+  // one: 20+ legitimate options (apiHost, conversationId, replyContext,
+  // initialMessages and the whole theme-colour surface) are read in other
+  // files, so the check fired on all of them. Hand-maintaining that list is
+  // the same two-place edit this change exists to delete, and a warning that
+  // cries wolf on valid config teaches people to ignore warnings — worse
+  // than the silence it replaced. A typo'd key still does nothing; it just
+  // no longer takes a working feature down with it.
   const resolvedConfig = useMemo(
-    () => ({
+    () => {
+      const normalized = {
       // ── API ─────────────────────────────────��─────────────────────────────
       // apiEndpoints lets consumers override individual endpoint paths/URLs.
       // Each key overrides one route; omitted keys fall back to the default
@@ -217,7 +247,13 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       attachmentChipBorder:    config.attachmentChipBorder    ?? null,
       attachmentChipIconColor: config.attachmentChipIconColor ?? null,
       attachmentChipTextColor: config.attachmentChipTextColor ?? null,
-    }),
+      };
+
+      // normalized wins: each of its entries already folded in the
+      // consumer's value (`config.x ?? default`), so this only restores the
+      // defaults for keys the consumer omitted.
+      return { ...config, ...normalized };
+    },
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
