@@ -98,6 +98,16 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       onResponse: config.onResponse ?? null,
       onSubmit:   config.onSubmit   ?? null,
       onFeedback: config.onFeedback ?? null,
+      // Fired when the conversation is reset — the New Chat button (after its
+      // confirmation) and actions.reset(). The library tells the BACKEND
+      // itself (the next request carries reset:true); this is for state only
+      // the consumer knows about.
+      onNewChat:  config.onNewChat  ?? null,
+      // The New Chat confirmation dialog: when to ask, and what it says.
+      newChatConfirm: config.newChatConfirm ?? null,
+      // Thumbs behaviour: whether to collect a written correction, what the
+      // box says, and (feedback.submit) who owns the request.
+      feedback: config.feedback ?? null,
       // ── Consumer icon overrides ────────────────────────────────────────
       icons: config.icons ?? {},
       // ── Color overrides (shorthand; applied as CSS vars on root) ──────

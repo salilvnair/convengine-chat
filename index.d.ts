@@ -315,6 +315,36 @@ export interface ConvEngineChatConfig {
   // ── Lifecycle callbacks ────────────────────────────────────────────────────
   /** Fired when the user sends a message (raw text, before enrichment). */
   onMessage?: (text: string) => void;
+  /**
+   * Fired when the conversation is reset — the New Chat button (after its
+   * confirmation, if any) and `actions.reset()` both go through it.
+   *
+   * Use it to drop whatever the CONSUMER holds per conversation: server-side
+   * scratch state, a history sidebar, analytics. The library already tells the
+   * BACKEND on its own — the next request after a reset carries `reset: true`
+   * in its body — so this is for state the library cannot know about.
+   */
+  onNewChat?: () => void;
+
+  /**
+   * The New Chat confirmation dialog. Omit for the default: confirm only when
+   * the transcript is non-empty, with English copy.
+   */
+  newChatConfirm?: {
+    /**
+     * When to ask. `'when-not-empty'` (default) confirms only if there are
+     * messages to lose; `'always'` suits a surface where a reset is expensive
+     * because it clears server-side state; `'never'` skips the dialog.
+     */
+    when?: 'when-not-empty' | 'always' | 'never';
+    /** Dialog body. @default 'Start a new chat? Your current conversation will be cleared.' */
+    message?: string;
+    /** Dismiss button. @default 'Cancel' */
+    cancelLabel?: string;
+    /** Confirm button. @default 'New Chat' */
+    confirmLabel?: string;
+  };
+
   /** Fired when an assistant response arrives. */
   onResponse?: (text: string) => void;
   /** Fired right before every request is sent — composer, renderer `actions.submit`,
@@ -324,11 +354,59 @@ export interface ConvEngineChatConfig {
   onSubmit?: (payload: { userText: string; apiText: string; inputParams: Record<string, unknown> }) => void;
   /** Fired right before 👍/👎 feedback is sent to the backend — same "before the
    *  request" timing as `onSubmit`. */
+  /**
+   * The thumbs row below each assistant message. Omit for the default:
+   * submit immediately on click, to this library's own feedback endpoint.
+   */
+  feedback?: {
+    /**
+     * Collect a written correction BEFORE submitting. `'negative'` asks only
+     * on thumbs-down, `'always'` on both, `'none'` (default) never.
+     *
+     * Worth turning on whenever the backend acts on feedback rather than just
+     * counting it: a bare down-vote records that an answer was wrong and
+     * nothing about what it should have been.
+     */
+    requireCommentOn?: 'none' | 'negative' | 'always';
+    /** Refuse to submit an empty comment. @default false */
+    requireCommentText?: boolean;
+    /**
+     * Own the submission. Given the full payload (including `comment` and the
+     * `question` the answer replied to), this replaces the built-in POST —
+     * for an app whose feedback API isn't this library's.
+     */
+    submit?: (payload: {
+      conversationId: string;
+      messageId: string;
+      feedbackType: string;
+      assistantResponse: string;
+      comment: string;
+      question: string;
+    }) => void | Promise<void>;
+    /** Tooltips. @default 'Helpful' / 'Not helpful' */
+    upLabel?: string;
+    downLabel?: string;
+    /** Correction box placeholder. @default 'What should the answer have been?' */
+    commentPlaceholder?: string;
+    /** Placeholder when the comment was asked for on a POSITIVE vote. */
+    commentPlaceholderPositive?: string;
+    /** Correction box buttons. @default 'Cancel' / 'Send' */
+    commentCancelLabel?: string;
+    commentSubmitLabel?: string;
+    /** Confirmation shown next to the thumbs once a vote lands. */
+    thanksUpText?: string;
+    thanksDownText?: string;
+  };
+
   onFeedback?: (feedback: {
     conversationId: string;
     messageId: string;
     feedbackType: string;
     assistantResponse: string;
+    /** The correction text, when `feedback.requireCommentOn` collected one. */
+    comment: string;
+    /** The user turn this answer replied to — a correction needs its question. */
+    question: string;
   }) => void;
 
   // ── Debug flags — all default false, zero cost when off ───────────────────

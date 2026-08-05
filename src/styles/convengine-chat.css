@@ -3167,3 +3167,73 @@
   font-weight: 600;
 }
 .ce-bubble-file-size { opacity: .7; }
+
+/* ── Feedback correction box ──────────────────────────────────────────────
+   Shown instead of submitting immediately when
+   config.feedback.requireCommentOn asks for a written correction. A bare
+   thumbs-down tells a backend that an answer was wrong and nothing else;
+   apps that feed corrections back into a knowledge base need the "should
+   have been". */
+.ce-feedback-wrap { display: flex; flex-direction: column; gap: 6px; }
+
+.ce-feedback-thanks {
+  font-size: 11px;
+  color: var(--ce-text-secondary);
+  align-self: center;
+}
+
+.ce-feedback-comment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--ce-border-color);
+  border-radius: 10px;
+  background: var(--ce-bg-composer-surface, var(--ce-bg-panel));
+  max-width: 520px;
+}
+
+.ce-feedback-comment-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 56px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ce-text-primary);
+  background: var(--ce-bg-panel);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 8px;
+  outline: none;
+}
+.ce-feedback-comment-input:focus {
+  border-color: var(--ce-color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ce-color-accent) 16%, transparent);
+}
+.ce-feedback-comment-input::placeholder { color: var(--ce-text-placeholder); }
+
+.ce-feedback-comment-btns { display: flex; gap: 6px; justify-content: flex-end; }
+
+.ce-feedback-cancel,
+.ce-feedback-submit {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: opacity .12s ease, background .12s ease;
+}
+.ce-feedback-cancel {
+  color: var(--ce-text-secondary);
+  background: transparent;
+  border: 1px solid var(--ce-border-color);
+}
+.ce-feedback-cancel:hover { color: var(--ce-text-primary); }
+.ce-feedback-submit {
+  color: var(--ce-text-bubble-user, #fff);
+  background: var(--ce-color-accent);
+  border: 1px solid var(--ce-color-accent);
+}
+.ce-feedback-submit:disabled { opacity: .5; cursor: default; }

@@ -166,6 +166,28 @@ export function useChat() {
   const clearTimerRef      = useRef(null);
   const queuedProgressRef  = useRef('');
 
+  // ── "New chat" has to reach the backend ──────────────────────────────────
+  // The API contract has carried a `reset` flag since the beginning
+  // (api/client.js sendMessage's 4th argument, sent as `reset` in the request
+  // body) and NOTHING ever passed it — the send path always called
+  // sendMessage(id, text, params) with three arguments, so `reset` defaulted
+  // to false on every request this library has ever made. The flag was dead
+  // on arrival and no consumer could tell.
+  //
+  // The visible consequence: resetChat() empties the React state and nothing
+  // else, so a backend holding conversation history or per-conversation
+  // scratch state (uploaded files, loaded tables) keeps all of it. The user
+  // confirms "Start a new chat? Your current conversation will be cleared",
+  // the transcript goes blank, and the next answer opens by referring to the
+  // files from the conversation they were just told was cleared.
+  //
+  // So: resetChat arms this, and the next dispatch — whichever path sends it —
+  // carries reset:true and disarms it. One ref rather than a parameter
+  // threaded through sendMessage/performSend/the queue drain, because a
+  // parameter is something each call site can forget to pass, which is
+  // exactly how the flag died the first time.
+  const pendingResetRef = useRef(false);
+
   useEffect(() => {
     if (!streamClient || !conversationId) return;
 
@@ -283,6 +305,15 @@ export function useChat() {
     return () => ro.disconnect();
   }, [messages.length]);
 
+  // Consume the pending-reset flag: true exactly once, on the first dispatch
+  // after resetChat(). Read-and-clear in one place so two sends can never both
+  // claim it and no path can forget to clear it.
+  const takePendingReset = useCallback(() => {
+    const armed = pendingResetRef.current;
+    pendingResetRef.current = false;
+    return armed;
+  }, []);
+
   // ── Core dispatch — actually calls the backend for one message ──────────
   // Shared by the immediate-send path and the queue-drain effect below, so
   // "send now" and "send once it's this queued message's turn" are the exact
@@ -337,7 +368,9 @@ export function useChat() {
         userText, config.messageEnrichment, { ...replyParams, ...fileParams },
       );
       config.onSubmit?.({ userText, apiText, inputParams });
-      const res = await apiClient.sendMessage(conversationId, apiText, inputParams);
+      const res = await apiClient.sendMessage(
+        conversationId, apiText, inputParams, takePendingReset(),
+      );
       const elapsed = Math.round(performance.now() - _t0);
       const assistantText = stringifyPayload(
         res?.payload?.value ?? res?.payload ?? '',
@@ -479,6 +512,7 @@ export function useChat() {
           conversationId,
           apiText,
           enrichedParams,
+          takePendingReset(),
         );
         const assistantText = stringifyPayload(
           res?.payload?.value ?? res?.payload ?? '',
@@ -567,8 +601,24 @@ export function useChat() {
     setProgressText('');
     setEngineStatus(null);
     setAuditRevision(0);
+    // Queued drafts and picked attachments are part of "the current
+    // conversation" too. Leaving them behind meant hitting New Chat with
+    // messages still queued dispatched them into the supposedly-new
+    // conversation moments later, and a file picked but not yet sent stayed
+    // clipped to the composer across a reset the user was told would clear it.
+    setMessageQueue([]);
+    setAttachments([]);
+    setAttachmentErr('');
+    clearReplyContext?.();
+    // Tell the BACKEND, on the next send. See pendingResetRef.
+    pendingResetRef.current = true;
+    // ...and tell the CONSUMER now, so an app holding its own per-conversation
+    // state (server-side scratch files, a history sidebar, analytics) can drop
+    // it at the moment the user asks for a new chat rather than inferring it
+    // from an empty transcript later.
+    config.onNewChat?.();
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, []);
+  }, [config, clearReplyContext, setMessageQueue]);
 
   // ── Enter key handler ────────────────────────────────────────────────────
   const handleKeyDown = useCallback(
@@ -582,7 +632,7 @@ export function useChat() {
 
   // ── Feedback ─────────────────────────────────────────────────────────────
   const submitFeedback = useCallback(
-    async (messageId, feedbackType) => {
+    async (messageId, feedbackType, comment = '') => {
       if (!messageId || !feedbackType) return;
 
       // Look the target up in `messages` directly rather than capturing it
@@ -601,24 +651,47 @@ export function useChat() {
         ),
       );
 
-      config.onFeedback?.({
+      // The question this answer replied to — the nearest preceding user
+      // turn. A correction is meaningless without it ('the answer should
+      // have been X' — to WHAT?), and only the library knows the transcript.
+      const askedIndex = messages.findIndex((m) => m.id === messageId);
+      const question = askedIndex > 0
+        ? [...messages.slice(0, askedIndex)].reverse().find((m) => m.role === 'user')?.text ?? ''
+        : '';
+
+      const payload = {
         conversationId,
         messageId: target.id,
         feedbackType,
         assistantResponse: target.text,
-      });
+        comment,
+        question,
+      };
+
+      config.onFeedback?.(payload);
 
       try {
-        await apiClient.submitFeedback({
-          conversationId,
-          feedbackType,
-          messageId: target.id,
-          assistantResponse: target.text,
-          metadata: {
-            role: target.role,
-            hasMarkdownTable: containsMarkdownTable(target.text),
-          },
-        });
+        // `feedback.submit` hands the whole thing to the consumer — their
+        // endpoint, their payload shape. Without it an app whose feedback
+        // API is not this library's has to disable the built-in thumbs and
+        // rebuild the row itself, which is how a consumer ends up
+        // maintaining its own copy of a feature the library already has.
+        if (typeof config.feedback?.submit === 'function') {
+          await config.feedback.submit(payload);
+        } else {
+          await apiClient.submitFeedback({
+            conversationId,
+            feedbackType,
+            messageId: target.id,
+            assistantResponse: target.text,
+            metadata: {
+              role: target.role,
+              hasMarkdownTable: containsMarkdownTable(target.text),
+              comment,
+              question,
+            },
+          });
+        }
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === messageId

@@ -110,7 +110,14 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
   );
 
   const handleNewChat = () => {
-    if (messages.length > 0) setConfirmNewChat(true);
+    // Confirm only when there is something to lose, unless the consumer has
+    // said otherwise: `always` for a surface where a reset is expensive
+    // (it clears server-side scratch state), `never` for one where a new chat
+    // is cheap and the extra click is just friction.
+    const mode = config.newChatConfirm?.when ?? 'when-not-empty';
+    const needsConfirm = mode === 'always'
+      || (mode !== 'never' && messages.length > 0);
+    if (needsConfirm) setConfirmNewChat(true);
     else resetChat();
   };
 
@@ -122,10 +129,13 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
         {confirmNewChat && (
           <div className="ce-confirm-overlay" style={{ position: 'absolute', inset: 0, zIndex: 99 }}>
             <div className="ce-confirm-dialog">
-              <p className="ce-confirm-msg">Start a new chat? Your current conversation will be cleared.</p>
+              <p className="ce-confirm-msg">{config.newChatConfirm?.message
+                  ?? 'Start a new chat? Your current conversation will be cleared.'}</p>
               <div className="ce-confirm-btns">
-                <button className="ce-confirm-cancel" onClick={() => setConfirmNewChat(false)}>Cancel</button>
-                <button className="ce-confirm-ok" onClick={() => { resetChat(); setConfirmNewChat(false); }}>New Chat</button>
+                <button className="ce-confirm-cancel" onClick={() => setConfirmNewChat(false)}>
+                  {config.newChatConfirm?.cancelLabel ?? 'Cancel'}</button>
+                <button className="ce-confirm-ok" onClick={() => { resetChat(); setConfirmNewChat(false); }}>
+                  {config.newChatConfirm?.confirmLabel ?? 'New Chat'}</button>
               </div>
             </div>
           </div>
