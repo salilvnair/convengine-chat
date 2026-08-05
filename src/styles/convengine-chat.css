@@ -118,6 +118,28 @@
   /* Reply/context pill accent (overridable per pill via inline --ce-reply-accent) */
   --ce-reply-accent:         var(--ce-color-accent);
 
+  /* Attachment chip (composer file preview) */
+  --ce-attachment-chip-bg:     var(--ce-bg-composer-surface);
+  --ce-attachment-chip-border: var(--ce-border-color);
+  --ce-attachment-chip-icon:   var(--ce-color-accent);
+  --ce-attachment-chip-text:   var(--ce-text-primary);
+
+  /* Message queue cards (Claude Code / Codex style) — cycles 1→5.
+     Borders auto-derive from each background via color-mix. */
+  --ce-queue-item-text: var(--ce-text-primary);
+  --ce-queue-color-1: #eef2ff;  /* indigo tint */
+  --ce-queue-color-2: #ecfeff;  /* cyan tint */
+  --ce-queue-color-3: #f0fdf4;  /* green tint */
+  --ce-queue-color-4: #fefce8;  /* amber tint */
+  --ce-queue-color-5: #fdf4ff;  /* fuchsia tint */
+
+  /* Feedback thumbs — bare icons, neutral at rest, colorize green/red on
+     hover + once voted (no background pill). */
+  --ce-feedback-up-resting-color:   var(--ce-text-secondary);
+  --ce-feedback-up-color:           #16a34a;  /* green-600 */
+  --ce-feedback-down-resting-color: var(--ce-text-secondary);
+  --ce-feedback-down-color:         #dc2626;  /* red-600 */
+
   /* Motion */
   --ce-transition-fast:      150ms cubic-bezier(0.4, 0, 0.2, 1);
   --ce-transition-med:       250ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -145,6 +167,16 @@
   --ce-avatar-agent-color:   var(--ce-icon-color);
   --ce-date-chip-bg:         var(--ce-color-accent-light);
   --ce-shadow-panel:         0 4px 32px rgba(0,0,0,0.5);
+
+  --ce-attachment-chip-bg:     var(--ce-bg-composer-surface);
+  --ce-attachment-chip-border: var(--ce-border-color);
+
+  --ce-queue-item-text: var(--ce-text-primary);
+  --ce-queue-color-1: color-mix(in srgb, #6366f1 22%, var(--ce-bg-composer-surface));
+  --ce-queue-color-2: color-mix(in srgb, #06b6d4 22%, var(--ce-bg-composer-surface));
+  --ce-queue-color-3: color-mix(in srgb, #22c55e 22%, var(--ce-bg-composer-surface));
+  --ce-queue-color-4: color-mix(in srgb, #f59e0b 22%, var(--ce-bg-composer-surface));
+  --ce-queue-color-5: color-mix(in srgb, #d946ef 22%, var(--ce-bg-composer-surface));
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1125,45 +1157,89 @@
 /* ══════════════════════════════════════════════════════════════════════════
    FEEDBACK ROW
    ══════════════════════════════════════════════════════════════════════════ */
-.ce-chat-root .ce-feedback-row {
+/* Shared hover surface for the bubble + its feedback row (ChatThread.jsx
+   wraps both in this). One continuous hoverable box — no dead zone between
+   the bubble's bottom and the row's top, so the mouse can wander anywhere
+   inside it (including that gap) without the row flickering hidden. */
+.ce-chat-root .ce-message-group {
   display: flex;
-  gap: 4px;
-  padding: 2px 0 0 calc(var(--ce-avatar-size) + 10px);
-  margin-top: -8px;
+  flex-direction: column;
 }
 
+.ce-chat-root .ce-feedback-row {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0 0 calc(var(--ce-avatar-size) + 10px);
+  margin-top: 0;
+  /* Hover-reveal, same technique as .ce-bubble-reply-btn: hidden at rest,
+     space still reserved (no layout shift). Revealed by hovering/focusing
+     anywhere in the shared .ce-message-group box (bubble + row + the gap
+     between them) — hovering a descendant (the bubble, the reply button)
+     counts too, since :hover always cascades up to ancestors — or the row
+     itself, so keyboard focus / a mouse already inside the row also works. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ce-transition-fast);
+}
+.ce-chat-root .ce-message-group:hover .ce-feedback-row,
+.ce-chat-root .ce-feedback-row:hover,
+.ce-chat-root .ce-feedback-row:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Bare icon, no box — border/background live only as a subtle hover cue
+   (see color rules below), not a permanent pill around the icon. */
 .ce-chat-root .ce-feedback-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  border: 1px solid var(--ce-border-color);
+  width: 20px;
+  height: 20px;
+  border: none;
   background: transparent;
   color: var(--ce-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--ce-transition-fast), color var(--ce-transition-fast),
-    border-color var(--ce-transition-fast), transform var(--ce-transition-fast);
+  transition: color var(--ce-transition-fast), transform var(--ce-transition-fast);
 }
 
-.ce-chat-root .ce-feedback-btn svg { width: 14px; height: 14px; }
-.ce-chat-root .ce-feedback-btn:hover:not(:disabled) {
-  background: var(--ce-color-accent-light);
-  color: var(--ce-color-accent);
-  border-color: var(--ce-color-accent);
-  transform: scale(1.1);
+.ce-chat-root .ce-feedback-btn svg { width: 16px; height: 16px; }
+.ce-chat-root .ce-feedback-btn:hover { transform: scale(1.15); }
+
+/* Thumbs-up / thumbs-down colorize independently on hover + once voted —
+   green/red by default, fully configurable (see config.feedbackUpColor /
+   feedbackDownColor / *RestingColor). Higher specificity than the generic
+   .ce-feedback-btn rule above, so these win without needing !important. */
+.ce-chat-root .ce-feedback-btn--up { color: var(--ce-feedback-up-resting-color); }
+.ce-chat-root .ce-feedback-btn--down { color: var(--ce-feedback-down-resting-color); }
+.ce-chat-root .ce-feedback-btn--up:hover,
+.ce-chat-root .ce-feedback-btn--up.ce-feedback-btn--active {
+  color: var(--ce-feedback-up-color);
+}
+.ce-chat-root .ce-feedback-btn--down:hover,
+.ce-chat-root .ce-feedback-btn--down.ce-feedback-btn--active {
+  color: var(--ce-feedback-down-color);
 }
 
-.ce-chat-root .ce-feedback-btn--active {
-  background: var(--ce-color-accent-light);
-  color: var(--ce-color-accent);
-  border-color: var(--ce-color-accent);
+/* Active (voted) state — stays visibly bigger than resting/hover so it's
+   obvious at a glance which one you picked, plus a one-shot "wow" pop the
+   moment it lands (equal specificity to the plain :hover rule above, placed
+   after it, so an active button stays at its bigger size even while
+   hovered). config.feedbackClickAnimation: false (→ .ce-feedback-no-pop on
+   the root) swaps the bouncy keyframe for the plain scale transition every
+   .ce-feedback-btn already has — same end size, no overshoot bounce. */
+.ce-chat-root .ce-feedback-btn.ce-feedback-btn--active {
+  transform: scale(1.25);
+  animation: ce-feedback-pop 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
-.ce-chat-root .ce-feedback-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+@keyframes ce-feedback-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.65); }
+  60%  { transform: scale(0.92); }
+  100% { transform: scale(1.25); }
+}
+.ce-chat-root.ce-feedback-no-pop .ce-feedback-btn.ce-feedback-btn--active {
+  animation: none;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2356,8 +2432,12 @@
    PANEL — POPOUT STATE (free-floating draggable window)
    ══════════════════════════════════════════════════════════════════════════ */
 .ce-chat-root .ce-panel--popout {
-  width: min(92vw, 560px) !important;
-  max-height: min(88vh, 780px) !important;
+  /* No !important — once the user drags a resize handle, PanelMode.jsx sets
+     explicit inline width/height that must be able to win over these
+     defaults. Equal specificity + later-in-file cascade order still lets
+     this beat the base .ce-panel rule when no inline size is present. */
+  width: min(92vw, 560px);
+  max-height: min(88vh, 780px);
   border-radius: 16px;
   box-shadow:
     0 24px 64px rgba(0, 0, 0, 0.24),
@@ -2365,6 +2445,39 @@
   z-index: 2147483647 !important;
   animation: ce-panel-popout-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+/* Resize handles — invisible hit-targets along each edge/corner, popout only.
+   Sit just inside the box (overflow:hidden on .ce-panel would clip anything
+   poking outside it) — thin enough to stay out of the way of real content. */
+.ce-chat-root .ce-panel--popout .ce-resize-handle {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+}
+.ce-chat-root .ce-panel--popout .ce-resize-handle--n,
+.ce-chat-root .ce-panel--popout .ce-resize-handle--s {
+  left: 10px; right: 10px; height: 8px; cursor: ns-resize;
+}
+.ce-chat-root .ce-panel--popout .ce-resize-handle--n { top: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--s { bottom: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--e,
+.ce-chat-root .ce-panel--popout .ce-resize-handle--w {
+  top: 10px; bottom: 10px; width: 8px; cursor: ew-resize;
+}
+.ce-chat-root .ce-panel--popout .ce-resize-handle--e { right: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--w { left: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--ne,
+.ce-chat-root .ce-panel--popout .ce-resize-handle--sw {
+  width: 16px; height: 16px; cursor: nesw-resize;
+}
+.ce-chat-root .ce-panel--popout .ce-resize-handle--nw,
+.ce-chat-root .ce-panel--popout .ce-resize-handle--se {
+  width: 16px; height: 16px; cursor: nwse-resize;
+}
+.ce-chat-root .ce-panel--popout .ce-resize-handle--ne { top: 0; right: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--nw { top: 0; left: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--se { bottom: 0; right: 0; }
+.ce-chat-root .ce-panel--popout .ce-resize-handle--sw { bottom: 0; left: 0; }
 
 @keyframes ce-panel-popout-in {
   from { transform: scale(0.9); opacity: 0; }
@@ -2920,11 +3033,11 @@
   padding: 2px 4px 2px 7px;
   border-radius: 6px;
   font-size: 11px;
-  color: var(--ce-text-primary);
-  background: var(--ce-bg-composer-surface);
-  border: 1px solid var(--ce-border-color);
+  color: var(--ce-attachment-chip-text, var(--ce-text-primary));
+  background: var(--ce-attachment-chip-bg, var(--ce-bg-composer-surface));
+  border: 1px solid var(--ce-attachment-chip-border, var(--ce-border-color));
 }
-.ce-file-chip-icon { display: inline-flex; color: var(--ce-color-accent); flex: 0 0 auto; }
+.ce-file-chip-icon { display: inline-flex; color: var(--ce-attachment-chip-icon, var(--ce-color-accent)); flex: 0 0 auto; }
 .ce-file-chip-name {
   max-width: 150px;
   overflow: hidden;
@@ -2951,6 +3064,86 @@
   color: var(--ce-danger, #e0808f);
   padding: 0 2px 6px;
 }
+
+/* ── Message queue (Claude Code / Codex style) ─────────────────────────────
+   Sits above the input box, below any attachments still being drafted for
+   the NEXT send. Each card cycles through 5 configurable colors so
+   consecutive queued messages stay visually distinct. */
+.ce-message-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding-bottom: 6px;
+}
+.ce-queue-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px 7px 10px;
+  /* Follows config.composerShape, same as the composer field itself —
+     'round' (default) is a soft rounded card, 'rect' squares it off. */
+  border-radius: 14px;
+  border: 1px solid var(--ce-border-color);
+  font-size: 12.5px;
+  color: var(--ce-queue-item-text, var(--ce-text-primary));
+  transition: border-radius var(--ce-transition-fast);
+  animation: ce-queue-item-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.ce-composer--rect .ce-queue-item { border-radius: 6px; }
+@keyframes ce-queue-item-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.ce-queue-item-index {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.ce-queue-item-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ce-queue-item-files {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+.ce-queue-item-x {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: currentColor;
+  opacity: 0.65;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  line-height: 1;
+  transition: background var(--ce-transition-fast), opacity var(--ce-transition-fast);
+}
+.ce-queue-item-x:hover { opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
+
+.ce-queue-item--1 { background: var(--ce-queue-color-1); border-color: color-mix(in srgb, var(--ce-queue-color-1) 60%, var(--ce-border-color)); }
+.ce-queue-item--2 { background: var(--ce-queue-color-2); border-color: color-mix(in srgb, var(--ce-queue-color-2) 60%, var(--ce-border-color)); }
+.ce-queue-item--3 { background: var(--ce-queue-color-3); border-color: color-mix(in srgb, var(--ce-queue-color-3) 60%, var(--ce-border-color)); }
+.ce-queue-item--4 { background: var(--ce-queue-color-4); border-color: color-mix(in srgb, var(--ce-queue-color-4) 60%, var(--ce-border-color)); }
+.ce-queue-item--5 { background: var(--ce-queue-color-5); border-color: color-mix(in srgb, var(--ce-queue-color-5) 60%, var(--ce-border-color)); }
 
 /* Attachments recorded on a sent bubble. */
 .ce-bubble-files {

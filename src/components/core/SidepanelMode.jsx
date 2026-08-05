@@ -69,6 +69,9 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
     acceptFileTypes,
     addFiles,
     removeAttachment,
+    messageQueue,
+    maxQueuedMessages,
+    removeQueuedMessage,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -270,6 +273,9 @@ export function SidepanelMode({ align = 'right', isDark, toggleTheme, onModeChan
             acceptFileTypes={acceptFileTypes}
             onFilesPicked={addFiles}
             onRemoveAttachment={removeAttachment}
+            messageQueue={messageQueue}
+            maxQueuedMessages={maxQueuedMessages}
+            onCancelQueued={removeQueuedMessage}
           />
         </div>
       </>

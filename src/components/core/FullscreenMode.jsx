@@ -83,6 +83,9 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
     acceptFileTypes,
     addFiles,
     removeAttachment,
+    messageQueue,
+    maxQueuedMessages,
+    removeQueuedMessage,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -219,6 +222,9 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
             acceptFileTypes={acceptFileTypes}
             onFilesPicked={addFiles}
             onRemoveAttachment={removeAttachment}
+            messageQueue={messageQueue}
+            maxQueuedMessages={maxQueuedMessages}
+            onCancelQueued={removeQueuedMessage}
           />
         </div>
 

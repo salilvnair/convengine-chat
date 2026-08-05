@@ -23,12 +23,12 @@ export function ChatHeader({
 }) {
   const { AuditIcon, MinimizeIcon, MoonIcon, SunIcon, NewChatIcon } = useIcons();
   return (
-    <header className="ce-header">
-      <div
-        className="ce-header-brand"
-        onMouseDown={onDragStart}
-        style={onDragStart ? { cursor: 'move', userSelect: 'none' } : undefined}
-      >
+    <header
+      className="ce-header"
+      onMouseDown={onDragStart}
+      style={onDragStart ? { cursor: 'move', userSelect: 'none' } : undefined}
+    >
+      <div className="ce-header-brand">
         {showHeaderDot && <span className="ce-header-dot" aria-hidden="true" />}
         <span className="ce-header-title">{title}</span>
         {showTransportBadge && (

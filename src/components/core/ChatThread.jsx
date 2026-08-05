@@ -47,10 +47,16 @@ export function ChatThread({ threadRef, messages, isTyping, progressText, onFeed
               {bubble.role === 'user' ? (
                 <UserMessage bubble={bubble} />
               ) : (
-                <AssistantMessage bubble={bubble} />
-              )}
-              {showFeedback && (
-                <ChatFeedbackRow bubble={bubble} onFeedback={onFeedback} />
+                // Bubble + feedback row share ONE hover surface (.ce-message-group)
+                // spanning their full combined box — no dead zone between them, so
+                // moving the mouse from the bubble down into the thumbs (or anywhere
+                // else inside that box) never flickers the row hidden partway.
+                <div className="ce-message-group">
+                  <AssistantMessage bubble={bubble} />
+                  {showFeedback && (
+                    <ChatFeedbackRow bubble={bubble} onFeedback={onFeedback} />
+                  )}
+                </div>
               )}
             </Fragment>
           );

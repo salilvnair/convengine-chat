@@ -269,6 +269,7 @@ const myRenderer = {
 | `mode` | `"panel" \| "sidepanel" \| "fullscreen"` | `"panel"` | Rendering mode. |
 | `position` | `"bottom" \| "top"` | `"bottom"` | Vertical FAB anchor (panel mode only). |
 | `align` | `"right" \| "left"` | `"right"` | Horizontal FAB anchor / sidepanel side. |
+| `draggable` | `boolean` | `false` | Panel mode only. Turns the FAB into a free-floating orb the user can drag anywhere on the page — see `config.orbMovement` / `config.orbAnimation` / `config.persistOrbPosition`. |
 | `config` | `object` | `{}` | Configuration bag — see [config Object](#config-object). |
 | `theme` | `object` | `{}` | CSS custom-property overrides, auto-prefixed with `--ce-`. |
 | `onModeChange` | `function` | `undefined` | Called with the new mode string when the user switches mode from the header picker. |
@@ -317,6 +318,54 @@ const myRenderer = {
 | `defaultDark` | `boolean` | `false` | Open in dark mode on first render. |
 | `composerShape` | `"round" \| "rect"` | `"round"` | Pill (round) or rounded-rectangle (rect) composer input. |
 
+### Draggable Orb (panel mode + `draggable` prop)
+
+Setting `draggable` on `<ConvEngineChat mode="panel">` turns the FAB into a free-floating orb, like iOS AssistiveTouch — drag it anywhere on the page. `orbMovement` controls what happens on release, and `orbAnimation` controls how it moves and lands.
+
+```jsx
+<ConvEngineChat mode="panel" draggable config={{ orbMovement: 'edgeSnap', orbAnimation: 'bubblegum' }} />
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `orbMovement` | `"edgeSnap" \| "freeform"` | `"edgeSnap"` | `"edgeSnap"` snaps to the nearest left/right edge on release. `"freeform"` leaves the orb exactly where it's dropped — anywhere on the page. |
+| `orbAnimation` | `"none" \| "bubblegum" \| "smooth" \| "glide" \| "spring" \| "elastic" \| "rubberband" \| "jelly" \| "wobble" \| "pop" \| "magnetic"` | `"bubblegum"` | Named drag/snap animation style. `"none"` disables all animation for an instant, non-animated reposition. |
+| `persistOrbPosition` | `boolean` | `true` | Remember the orb's last dropped position across reloads via `localStorage`. |
+| `orbStorageKey` | `string` | `"ce-chat-orb-pos"` | `localStorage` key used to persist the orb's position — customize if you render multiple draggable widgets on one page. |
+
+`orbAnimation` styles: `bubblegum` (squash-and-stretch, springy landing — the default), `smooth`/`glide` (no squash, clean ease), `spring` (single overshoot), `elastic`/`rubberband` (pronounced overshoot + settle bounce), `jelly` (multi-bounce wobble on landing), `wobble` (pendulum tilt while dragging), `pop` (scale pop on landing), `magnetic` (fast snap + glow pulse).
+
+### Popout window — drag & resize (panel mode)
+
+Maximizing the panel (`showMaximize`) pops it out into a centered, free-floating window. The **entire header bar** is a drag handle (not just the title), and all 4 edges + 4 corners are resize handles — click-drag any of them, like a native OS window. No config needed; this is always on for the popout state.
+
+### Message Queue
+
+Sending while a request is already in flight no longer drops the message — it's captured as a draft, queued (capped at `maxQueuedMessages`), and dispatched automatically 1:1 as each prior request resolves (Claude Code / Codex style). Rendered as a stack of cards above the composer — each cancelable with its own ✕ before it's ever sent.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `maxQueuedMessages` | `number` | `5` | Max messages held in the queue while a request is in flight. Sending beyond this cap is a no-op (the draft stays in the composer) until a slot frees up. |
+| `queueColors` | `(string \| { light, dark })[]` | built-in 5-color palette | Up to 5 background colors, cycled per card (index 0 → card 1, and so on). Borders auto-derive from each color. Overrides `--ce-queue-color-1`..`-5`. |
+| `queueItemTextColor` | `string \| { light, dark }` | `undefined` | Text color on every card, regardless of its cycled background. Overrides `--ce-queue-item-text`. |
+
+### Feedback Thumbs (👍 / 👎)
+
+The 👍/👎 row fades in on hover — same technique as the reply icon (adjacent-sibling CSS, no timers): hover the assistant bubble, or the row itself, and it stays visible; move away from both and it fades out. Each thumb is neutral at rest and colorizes independently (green for 👍, red for 👎 by default) on hover and once voted.
+
+```jsx
+<ConvEngineChat config={{ feedbackUpColor: '#22c55e', feedbackDownColor: '#f43f5e' }} />
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `feedbackUpColor` | `string \| { light, dark }` | `"#16a34a"` | Hover + voted color for 👍. Background auto-tints from it. Overrides `--ce-feedback-up-color`. |
+| `feedbackUpRestingColor` | `string \| { light, dark }` | text-secondary | Idle (unvoted, unhovered) color for 👍. Overrides `--ce-feedback-up-resting-color`. |
+| `feedbackDownColor` | `string \| { light, dark }` | `"#dc2626"` | Hover + voted color for 👎. Background auto-tints from it. Overrides `--ce-feedback-down-color`. |
+| `feedbackDownRestingColor` | `string \| { light, dark }` | text-secondary | Idle (unvoted, unhovered) color for 👎. Overrides `--ce-feedback-down-resting-color`. |
+
+Icon shape is already fully swappable — no new plumbing needed: `config={{ icons: { ThumbUpIcon: MyIcon, ThumbDownIcon: MyOtherIcon } }}`. Custom icons using `stroke="currentColor"` / `fill="currentColor"` (like the built-in ones) automatically pick up the colors above; an icon with a hardcoded fill won't react to hover/voted state.
+
 ### Color Overrides
 
 Each key accepts a plain `string` or a `{ light: string, dark: string }` object.  
@@ -331,6 +380,10 @@ See [Color Theming](#color-theming) for full documentation.
 | `panelBg` | `--ce-bg-panel` | Chat panel / sidepanel background |
 | `composerBg` | `--ce-bg-composer` | Composer (input area) background |
 | `iconColor` | `--ce-icon-color` | Resting color of header icon buttons (hover always shows accent) |
+| `attachmentChipBg` | `--ce-attachment-chip-bg` | Background of a picked-file chip in the composer |
+| `attachmentChipBorder` | `--ce-attachment-chip-border` | Border of a picked-file chip |
+| `attachmentChipIconColor` | `--ce-attachment-chip-icon` | File icon color inside the chip (default: accent color) |
+| `attachmentChipTextColor` | `--ce-attachment-chip-text` | File name/size text color inside the chip |
 
 ### Streaming
 

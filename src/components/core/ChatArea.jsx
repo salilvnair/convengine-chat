@@ -62,6 +62,12 @@ export function ChatArea({
   acceptFileTypes = '',
   onFilesPicked,
   onRemoveAttachment,
+  // message queue (Claude Code / Codex style) — only relevant once a
+  // conversation is active (isInitial is false the instant isTyping becomes
+  // true, so queueing can only happen in this non-initial branch below).
+  messageQueue = [],
+  maxQueuedMessages = 5,
+  onCancelQueued,
 }) {
   const { config, chatState } = useConvEngineChatContext();
   const isFullscreen = variant === 'fullscreen';
@@ -196,6 +202,9 @@ export function ChatArea({
           acceptFileTypes={acceptFileTypes}
           onFilesPicked={onFilesPicked}
           onRemoveAttachment={onRemoveAttachment}
+          messageQueue={messageQueue}
+          maxQueuedMessages={maxQueuedMessages}
+          onCancelQueued={onCancelQueued}
           agentName={config.agentName}
         />
       </footer>

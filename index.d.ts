@@ -281,6 +281,15 @@ export interface ConvEngineChatConfig {
     maxFiles?: number;
   };
 
+  /**
+   * Sending while a request is already in flight no longer drops the
+   * message — it's held in a queue (capped at this value) and dispatched
+   * 1:1 as each prior request resolves, Claude Code / Codex style. Rendered
+   * as a stack of cancelable cards above the composer.
+   * @default 5
+   */
+  maxQueuedMessages?: number;
+
   // ── Color overrides ────────────────────────────────────────────────────────
   /** User message bubble fill. Overrides `--ce-bg-bubble-user`. */
   bubbleUserBg?: ColorValue;
@@ -401,6 +410,36 @@ export interface ConvEngineChatConfig {
   dateLabelColor?: string | { light?: string; dark?: string };
   /** Border color of the date separator chip. CSS var: `--ce-date-chip-border` */
   dateLabelBorderColor?: string | { light?: string; dark?: string };
+
+  // ── Attachment chip & message-queue card colors ─────────────────────────────
+  /** Background of a picked-file chip in the composer. CSS var: `--ce-attachment-chip-bg` */
+  attachmentChipBg?: string | { light?: string; dark?: string };
+  /** Border of a picked-file chip. CSS var: `--ce-attachment-chip-border` */
+  attachmentChipBorder?: string | { light?: string; dark?: string };
+  /** File icon color inside the chip. Defaults to the accent color. CSS var: `--ce-attachment-chip-icon` */
+  attachmentChipIconColor?: string | { light?: string; dark?: string };
+  /** File name/size text color inside the chip. CSS var: `--ce-attachment-chip-text` */
+  attachmentChipTextColor?: string | { light?: string; dark?: string };
+  /** Up to 5 background colors, cycled per pending-send card (index 0 → card 1,
+   *  and so on). Each accepts a plain string or `{ light, dark }`; borders
+   *  auto-derive from the background. CSS vars: `--ce-queue-color-1`..`-5` */
+  queueColors?: Array<string | { light?: string; dark?: string }>;
+  /** Text color on every pending-send card, regardless of its cycled
+   *  background. CSS var: `--ce-queue-item-text` */
+  queueItemTextColor?: string | { light?: string; dark?: string };
+
+  // ── Feedback thumbs (👍/👎) colors ───────────────────────────────────────────
+  // Neutral (--ce-text-secondary) at rest by default; colorize independently
+  // on hover and once voted. Icons themselves are already fully swappable via
+  // `icons.ThumbUpIcon` / `icons.ThumbDownIcon` — see ConvEngineChatIcons.
+  /** Hover + voted color for 👍. @default '#16a34a' (green-600). CSS var: `--ce-feedback-up-color` */
+  feedbackUpColor?: string | { light?: string; dark?: string };
+  /** Idle (unvoted, unhovered) color for 👍. @default text-secondary. CSS var: `--ce-feedback-up-resting-color` */
+  feedbackUpRestingColor?: string | { light?: string; dark?: string };
+  /** Hover + voted color for 👎. @default '#dc2626' (red-600). CSS var: `--ce-feedback-down-color` */
+  feedbackDownColor?: string | { light?: string; dark?: string };
+  /** Idle (unvoted, unhovered) color for 👎. @default text-secondary. CSS var: `--ce-feedback-down-resting-color` */
+  feedbackDownRestingColor?: string | { light?: string; dark?: string };
 
   // ── Advanced ───────────────────────────────────────────────────────────────
   /** Message enrichment — wrap outgoing text with prefix/suffix, attach static

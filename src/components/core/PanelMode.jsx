@@ -34,12 +34,23 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
   const [isMinimized,     setIsMinimized]     = useState(false);
   const [isPopout,        setIsPopout]        = useState(false);
   const [popoutPos,       setPopoutPos]       = useState({ x: null, y: null });
+  // Popout size — null until the user actually drags a resize handle, so the
+  // panel keeps its normal CSS-driven (content-hugging) size by default and
+  // only becomes a fixed-size "window" once resized, like a real OS window.
+  const [popoutSize,      setPopoutSize]      = useState({ width: null, height: null });
+  const [isInteracting,   setIsInteracting]   = useState(false); // dragging OR resizing — disables the panel's CSS transition
   // track which mode to restore to after un-minimizing
   const [lastMode,        setLastMode]        = useState('fab');   // 'fab' | 'popout'
   const [confirmNewChat,  setConfirmNewChat]  = useState(false);
   const [modeMenuOpen,    setModeMenuOpen]    = useState(false);
   const modeMenuRef = useRef(null);
+  const panelRef     = useRef(null);
   const dragRef     = useRef({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+  const resizeRef   = useRef({ active: false, edge: null, startX: 0, startY: 0, startW: 0, startH: 0, startLeft: 0, startTop: 0 });
+
+  const POPOUT_MIN_WIDTH  = 320;
+  const POPOUT_MIN_HEIGHT = 400; // matches the base --ce-panel-min-height default
+  const popoutClamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
   // ── Draggable orb (movable FAB) ───────────────────────────────────────────
   const orbMovement        = config.orbMovement        ?? 'edgeSnap'; // 'edgeSnap' | 'freeform'
@@ -268,6 +279,9 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
     acceptFileTypes,
     addFiles,
     removeAttachment,
+    messageQueue,
+    maxQueuedMessages,
+    removeQueuedMessage,
   } = useChat();
 
   // Expose chat actions to external consumers via actionsRef
@@ -305,17 +319,32 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
         : 'ce-panel--open'
     : 'ce-panel--closed';
 
-  // Popout overrides corner anchor with absolute drag position
+  // Popout overrides corner anchor with absolute drag position, plus a fixed
+  // width/height once the user has actually resized it (null = keep the
+  // normal CSS-driven content-hugging size). `isInteracting` kills the
+  // panel's CSS transition while actively dragging/resizing so inline style
+  // updates track the pointer 1:1 instead of animating behind it.
   const popoutStyle = (isPopout && !isMinimized && popoutPos.x !== null)
-    ? { position: 'fixed', left: popoutPos.x, top: popoutPos.y, right: 'auto', bottom: 'auto', transform: 'none' }
+    ? {
+        position: 'fixed', left: popoutPos.x, top: popoutPos.y, right: 'auto', bottom: 'auto', transform: 'none',
+        ...(popoutSize.width  != null ? { width: popoutSize.width } : {}),
+        ...(popoutSize.height != null ? { height: popoutSize.height, maxHeight: popoutSize.height } : {}),
+        ...(isInteracting ? { transition: 'none' } : {}),
+      }
     : {};
 
-  // ── Drag-to-move in popout mode (via header brand area) ──────────────────
+  // ── Drag-to-move in popout mode — the whole header bar is the drag handle
+  //    now (not just the title/brand area), like a native window's title bar.
+  //    Clicks that land on a real control (button, menu, etc.) fall through
+  //    untouched so they still work. ─────────────────────────────────────
   const onTitleDragStart = (e) => {
     if (!isPopout || isMinimized) return;
+    if (e.target.closest('button, a, input, select, textarea, [role="menu"], [role="menuitem"]')) return;
     e.preventDefault();
     const panel = e.currentTarget.closest('.ce-panel');
     const rect  = panel?.getBoundingClientRect?.();
+    const w = rect?.width  ?? 460;
+    const h = rect?.height ?? 600;
     dragRef.current = {
       active: true,
       startX: e.clientX,
@@ -323,21 +352,114 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
       origX:  popoutPos.x ?? rect?.left ?? 200,
       origY:  popoutPos.y ?? rect?.top  ?? 100,
     };
+    setIsInteracting(true);
     function onMove(ev) {
       if (!dragRef.current.active) return;
-      setPopoutPos({
-        x: dragRef.current.origX + ev.clientX - dragRef.current.startX,
-        y: dragRef.current.origY + ev.clientY - dragRef.current.startY,
-      });
+      // Keep at least ~100px of the header grabbable on-screen so a
+      // freely-dragged window can never be lost off-viewport.
+      const nx = popoutClamp(dragRef.current.origX + ev.clientX - dragRef.current.startX, -(w - 100), window.innerWidth  - 100);
+      const ny = popoutClamp(dragRef.current.origY + ev.clientY - dragRef.current.startY, 0,           window.innerHeight - 48);
+      setPopoutPos({ x: nx, y: ny });
     }
     function onUp() {
       dragRef.current.active = false;
+      setIsInteracting(false);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup',   onUp);
     }
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup',   onUp);
   };
+
+  // ── Resize-from-any-edge/corner in popout mode, like a native OS window ──
+  // Pointer Events + setPointerCapture (mirrors the orb-drag pattern) so the
+  // resize keeps tracking even if the cursor outruns the thin handle strip.
+  const handleResizePointerDown = (edge) => (e) => {
+    if (!isPopout || isMinimized) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const panel = panelRef.current;
+    const rect  = panel?.getBoundingClientRect?.();
+    if (!rect) return;
+    resizeRef.current = {
+      active: true, edge,
+      startX: e.clientX, startY: e.clientY,
+      startW: rect.width, startH: rect.height,
+      startLeft: rect.left, startTop: rect.top,
+    };
+    setIsInteracting(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+
+  const handleResizePointerMove = (e) => {
+    const r = resizeRef.current;
+    if (!r.active) return;
+    const dx = e.clientX - r.startX;
+    const dy = e.clientY - r.startY;
+    const margin = 24;
+    let width  = r.startW;
+    let height = r.startH;
+    let left   = r.startLeft;
+    let top    = r.startTop;
+
+    // Each edge's max isn't a flat viewport size — it's however much room is
+    // left between the panel's FIXED anchor edge (the one not being dragged)
+    // and the corresponding viewport edge, so the panel can never be resized
+    // past the window in either direction regardless of where it currently sits.
+    if (r.edge.includes('e')) {
+      const maxW = window.innerWidth - r.startLeft - margin;
+      width = popoutClamp(r.startW + dx, POPOUT_MIN_WIDTH, maxW);
+    }
+    if (r.edge.includes('s')) {
+      const maxH = window.innerHeight - r.startTop - margin;
+      height = popoutClamp(r.startH + dy, POPOUT_MIN_HEIGHT, maxH);
+    }
+    if (r.edge.includes('w')) {
+      const maxW = r.startLeft + r.startW - margin;
+      width = popoutClamp(r.startW - dx, POPOUT_MIN_WIDTH, maxW);
+      left  = r.startLeft + (r.startW - width);
+    }
+    if (r.edge.includes('n')) {
+      const maxH = r.startTop + r.startH - margin;
+      height = popoutClamp(r.startH - dy, POPOUT_MIN_HEIGHT, maxH);
+      top    = r.startTop + (r.startH - height);
+    }
+
+    setPopoutSize({ width, height });
+    if (r.edge.includes('w') || r.edge.includes('n')) setPopoutPos({ x: left, y: top });
+  };
+
+  const handleResizePointerUp = () => {
+    if (!resizeRef.current.active) return;
+    resizeRef.current.active = false;
+    setIsInteracting(false);
+  };
+
+  // Keep a resized/dragged popout on-screen and within bounds if the
+  // viewport itself shrinks (window resize, orientation change, etc.).
+  useEffect(() => {
+    if (!isPopout) return;
+    function handleViewportResize() {
+      setPopoutSize((size) => {
+        if (size.width == null && size.height == null) return size;
+        const maxW = window.innerWidth  - 24;
+        const maxH = window.innerHeight - 24;
+        return {
+          width:  size.width  != null ? popoutClamp(size.width,  POPOUT_MIN_WIDTH,  maxW) : null,
+          height: size.height != null ? popoutClamp(size.height, POPOUT_MIN_HEIGHT, maxH) : null,
+        };
+      });
+      setPopoutPos((pos) => {
+        if (pos.x == null) return pos;
+        return {
+          x: popoutClamp(pos.x, -300, window.innerWidth  - 100),
+          y: popoutClamp(pos.y, 0,    window.innerHeight - 48),
+        };
+      });
+    }
+    window.addEventListener('resize', handleViewportResize);
+    return () => window.removeEventListener('resize', handleViewportResize);
+  }, [isPopout]);
 
   // ── New chat with confirmation if messages exist ──────────────────────────
   const handleNewChat = () => {
@@ -473,6 +595,7 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
     <>
       {/* ── Floating chat panel ───────────────────────────────────────────── */}
       <div
+        ref={panelRef}
         className={`ce-panel ${posClass} ${alignClass} ${panelStateClass} ${config.showFab === false ? 'ce-panel--nofab' : ''}`}
         style={{ ...orbPanelStyle, ...popoutStyle }}
         role="dialog"
@@ -480,6 +603,20 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
         aria-label="Chat panel"
         aria-hidden={!isOpen}
       >
+        {/* ── Resize handles — popout mode only, like a native window's edges/corners ── */}
+        {isPopout && !isMinimized && (
+          <>
+            <div className="ce-resize-handle ce-resize-handle--n"  onPointerDown={handleResizePointerDown('n')}  onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--s"  onPointerDown={handleResizePointerDown('s')}  onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--e"  onPointerDown={handleResizePointerDown('e')}  onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--w"  onPointerDown={handleResizePointerDown('w')}  onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--ne" onPointerDown={handleResizePointerDown('ne')} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--nw" onPointerDown={handleResizePointerDown('nw')} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--se" onPointerDown={handleResizePointerDown('se')} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+            <div className="ce-resize-handle ce-resize-handle--sw" onPointerDown={handleResizePointerDown('sw')} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} />
+          </>
+        )}
+
         {/* ── Confirm new-chat dialog — overlays only the panel */}
         {confirmNewChat && (
           <div
@@ -534,6 +671,9 @@ export function PanelMode({ position = 'bottom', align = 'right', draggable = fa
             acceptFileTypes={acceptFileTypes}
             onFilesPicked={addFiles}
             onRemoveAttachment={removeAttachment}
+            messageQueue={messageQueue}
+            maxQueuedMessages={maxQueuedMessages}
+            onCancelQueued={removeQueuedMessage}
           />
         )}
       </div>  {/* end ce-panel */}

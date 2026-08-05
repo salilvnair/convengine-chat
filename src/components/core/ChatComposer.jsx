@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useIcons } from '../../hooks/useIcons.js';
 import { formatBytes } from '../../utils/attachments.js';
+import { ChatMessageQueue } from './ChatMessageQueue.jsx';
 
 /**
  * Textarea + send button composition.
@@ -33,6 +34,10 @@ export function ChatComposer({
   acceptFileTypes = '',
   onFilesPicked,
   onRemoveAttachment,
+  // ── message queue (Claude Code / Codex style) ──
+  messageQueue = [],
+  maxQueuedMessages = 5,
+  onCancelQueued,
   // ── identity ──
   agentName = '',
 }) {
@@ -138,6 +143,18 @@ export function ChatComposer({
     <div className="ce-composer-file-error" role="alert">{attachmentError}</div>
   );
 
+  // Pending-send queue (Claude Code / Codex style) — sits right above the
+  // input box, below any attachments still being drafted for the NEXT send.
+  const queueNode = (
+    <ChatMessageQueue queue={messageQueue} onCancel={onCancelQueued} />
+  );
+
+  // A response is in flight AND the queue is completely full — nothing more
+  // can be captured, so (and only so) the composer actually locks up.
+  // Otherwise typing/attaching/sending while isTyping just queues instead of
+  // dropping (see useChat.js sendMessage).
+  const queueFull = isTyping && messageQueue.length >= maxQueuedMessages;
+
   const fieldNode = (
     <>
       <textarea
@@ -146,8 +163,8 @@ export function ChatComposer({
         value={input}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder={placeholder}
-        disabled={isTyping}
+        placeholder={queueFull ? `Queue full (${maxQueuedMessages}/${maxQueuedMessages}) — waiting…` : placeholder}
+        disabled={queueFull}
         rows={1}
         aria-label="Message input"
         aria-multiline="true"
@@ -157,8 +174,8 @@ export function ChatComposer({
         type="button"
         className="ce-composer-send"
         onClick={onSend}
-        disabled={isTyping || (!input.trim() && attachments.length === 0)}
-        title="Send message"
+        disabled={queueFull || (!input.trim() && attachments.length === 0)}
+        title={queueFull ? `Queue full (${maxQueuedMessages}/${maxQueuedMessages})` : 'Send message'}
         aria-label="Send message"
       >
         <SendIcon />
@@ -174,6 +191,7 @@ export function ChatComposer({
         {replyNode}
         {filesNode}
         {errorNode}
+        {queueNode}
         {fieldNode}
       </div>
     );
@@ -187,6 +205,7 @@ export function ChatComposer({
     <div className={composerClass}>
       {filesNode}
       {errorNode}
+      {queueNode}
       <div className="ce-composer-field">
         {replyNode}
         {fieldNode}
@@ -212,7 +231,7 @@ export function ChatComposer({
               type="button"
               className="ce-composer-attach"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isTyping}
+              disabled={queueFull}
               title="Attach files"
               aria-label="Attach files"
             >

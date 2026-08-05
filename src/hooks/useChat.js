@@ -105,11 +105,13 @@ export function useChat() {
     progressText,  setProgressText,
     auditRevision, setAuditRevision,
     replyContext,  setReplyContext, clearReplyContext,
+    messageQueue,  setMessageQueue,
     threadRef,
     inputRef,
   } = chatState;
 
   const [engineStatus, setEngineStatus] = useState(null);
+  const maxQueuedMessages = config.maxQueuedMessages ?? 5;
 
   // ── Attachments ───────────────────────────────────────────────────────────
   // Held as raw File objects until send: reading them to base64 up front would
@@ -281,37 +283,27 @@ export function useChat() {
     return () => ro.disconnect();
   }, [messages.length]);
 
-  // ── Send a message ───────────────────────────────────────────────────────
-  const sendMessage = useCallback(async () => {
-    const userText = input.trim();
-    // A message carrying only files is legitimate — "here, look at this" — so
-    // the guard is "nothing at all to send", not "no text".
-    if ((!userText && attachments.length === 0) || isTyping) return;
+  // ── Core dispatch — actually calls the backend for one message ──────────
+  // Shared by the immediate-send path and the queue-drain effect below, so
+  // "send now" and "send once it's this queued message's turn" are the exact
+  // same code path. `draft` is a plain snapshot (not live state) since by the
+  // time a queued draft is dispatched, the composer has moved on.
+  const performSend = useCallback(async (draft) => {
+    const { userText, rawFiles = [], files = [], replySnapshot } = draft;
 
-    config.onMessage?.(userText);
-    setInput('');
-    setProgressText('');
-    // Attach the active reply to the SENT bubble so it shows the quote on top,
-    // then the user's text below (reply-preview-inside-the-bubble style).
-    const activeReply = replyContext
-      ? { label: replyContext.label, text: replyContext.text, accent: replyContext.accent }
+    const activeReply = replySnapshot
+      ? { label: replySnapshot.label, text: replySnapshot.text, accent: replySnapshot.accent }
       : undefined;
-    const sentFiles = attachments.map((f) => ({ name: f.name, size: f.size }));
     setMessages((m) => [
       ...m,
       {
         id: createClientId(), role: 'user', text: userText, reply: activeReply,
-        // Rendered as chips on the sent bubble so the transcript records WHAT
-        // was attached, not just that something was.
-        files: sentFiles.length ? sentFiles : undefined,
+        files: files.length ? files : undefined,
         sentAt: Date.now(),
       },
     ]);
-    clearAttachments();
-    // Reply-style: a reply pill is consumed by the next send (cleared here)
-    // unless it opted into persist:true (e.g. a long-lived "current context").
-    if (replyContext && !replyContext.persist) clearReplyContext();
     setIsTyping(true);
+    setProgressText('');
     const _t0 = performance.now();
 
     try {
@@ -327,18 +319,18 @@ export function useChat() {
       // as inputParams.replySourceText (whether it came from a bubble reply or
       // from config.replyContext on load), plus any extra `meta` fields — all
       // renderer-style, so they win over the messageEnrichment base.
-      const replyParams = replyContext
+      const replyParams = replySnapshot
         ? {
-            ...(replyContext.meta && typeof replyContext.meta === 'object' ? replyContext.meta : {}),
-            replySourceText: replyContext.replySourceText ?? replyContext.text,
+            ...(replySnapshot.meta && typeof replySnapshot.meta === 'object' ? replySnapshot.meta : {}),
+            replySourceText: replySnapshot.replySourceText ?? replySnapshot.text,
           }
         : undefined;
       // Attachments ride on inputParams — the same channel every other
       // per-message field uses — so a backend already reading inputParams
       // needs no new endpoint and no multipart handling.
       let fileParams;
-      if (attachments.length) {
-        const read = await Promise.all(attachments.map(readFileAsAttachment));
+      if (rawFiles.length) {
+        const read = await Promise.all(rawFiles.map(readFileAsAttachment));
         fileParams = { files: read };
       }
       const { apiText, inputParams } = await buildEnrichedPayload(
@@ -374,11 +366,73 @@ export function useChat() {
     } finally {
       setIsTyping(false);
       setProgressText('');
-      // Micro-defer so the DOM has updated before we scroll
+      // Micro-defer so the DOM has updated before we scroll / focus.
       requestAnimationFrame(scrollToBottom);
+      // Restore focus to the composer — without this the textarea's
+      // `disabled` state during the request blurs it, and the browser never
+      // gives focus back on its own once it's re-enabled.
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }, [input, isTyping, conversationId, apiClient, config, replyContext, clearReplyContext,
-      scrollToBottom, attachments, clearAttachments]);
+  }, [conversationId, apiClient, config, scrollToBottom]);
+
+  // ── Send a message ───────────────────────────────────────────────────────
+  // Claude Code / Codex style: sending while a request is already in flight
+  // no longer drops the message — it's captured as a draft and queued
+  // (capped at maxQueuedMessages), then dispatched automatically as each
+  // prior request resolves (see the drain effect below).
+  const sendMessage = useCallback(() => {
+    const userText = input.trim();
+    // A message carrying only files is legitimate — "here, look at this" — so
+    // the guard is "nothing at all to send", not "no text".
+    if (!userText && attachments.length === 0) return;
+    // Queue is full — leave the draft untouched rather than silently losing it.
+    if (isTyping && messageQueue.length >= maxQueuedMessages) return;
+
+    config.onMessage?.(userText);
+    const draft = {
+      id: createClientId(),
+      userText,
+      rawFiles: attachments,
+      files: attachments.map((f) => ({ name: f.name, size: f.size })),
+      replySnapshot: replyContext
+        ? {
+            label: replyContext.label, text: replyContext.text, accent: replyContext.accent,
+            meta: replyContext.meta, replySourceText: replyContext.replySourceText,
+          }
+        : null,
+    };
+
+    setInput('');
+    clearAttachments();
+    // Reply-style: a reply pill is consumed by the next send (cleared here)
+    // unless it opted into persist:true (e.g. a long-lived "current context").
+    if (replyContext && !replyContext.persist) clearReplyContext();
+    requestAnimationFrame(() => inputRef.current?.focus());
+
+    if (isTyping) {
+      setMessageQueue((q) => [...q, draft]);
+      return;
+    }
+    performSend(draft);
+  }, [input, isTyping, replyContext, clearReplyContext, attachments, clearAttachments,
+      config, messageQueue.length, maxQueuedMessages, performSend]);
+
+  // Cancel a queued (not-yet-sent) message — the ✕ on its card.
+  const removeQueuedMessage = useCallback((id) => {
+    setMessageQueue((q) => q.filter((item) => item.id !== id));
+  }, []);
+
+  // ── Drain the queue 1:1 as each request resolves ─────────────────────────
+  // Runs in whichever mode component currently has useChat() mounted; since
+  // messageQueue/isTyping both live in the shared provider state, this
+  // correctly continues the chain even across a mode switch mid-flight.
+  useEffect(() => {
+    if (isTyping || messageQueue.length === 0) return;
+    const [next, ...rest] = messageQueue;
+    setMessageQueue(rest);
+    performSend(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTyping, messageQueue, performSend]);
 
   // ── Renderer-initiated send ─────────────────────────────────────────────
   /**
@@ -531,15 +585,21 @@ export function useChat() {
     async (messageId, feedbackType) => {
       if (!messageId || !feedbackType) return;
 
-      let target = null;
-      setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg.id !== messageId) return msg;
-          target = msg;
-          return { ...msg, feedbackBusy: true };
-        }),
-      );
+      // Look the target up in `messages` directly rather than capturing it
+      // via a mutated closure variable inside the setMessages updater below —
+      // React only calls that updater SYNCHRONOUSLY when no update is already
+      // pending on this fiber (an eager-bailout optimization, not a
+      // guarantee). Right after a send, an update is almost always still
+      // pending, so the updater ran asynchronously and `target` stayed null
+      // forever, silently no-op'ing every vote.
+      const target = messages.find((msg) => msg.id === messageId);
       if (!target) return;
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId ? { ...msg, feedbackBusy: true } : msg,
+        ),
+      );
 
       config.onFeedback?.({
         conversationId,
@@ -574,7 +634,7 @@ export function useChat() {
         );
       }
     },
-    [conversationId, apiClient, config],
+    [messages, conversationId, apiClient, config],
   );
 
   return {
@@ -594,6 +654,9 @@ export function useChat() {
     attachmentError,
     attachmentsEnabled,
     acceptFileTypes,
+    // Message queue (Claude Code / Codex style)
+    messageQueue,
+    maxQueuedMessages,
     // Refs
     threadRef,
     inputRef,
@@ -608,6 +671,7 @@ export function useChat() {
     addFiles,
     removeAttachment,
     clearAttachments,
+    removeQueuedMessage,
     resetChat,
     handleKeyDown,
     submitFeedback,

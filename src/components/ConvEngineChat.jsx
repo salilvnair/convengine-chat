@@ -138,6 +138,7 @@ export function ConvEngineChat({
     mode === 'fullscreen' ? 'ce-chat-root--fullscreen' : '',
     config.debugHighlightRenderers ? 'ce-debug-highlight-renderers' : '',
     config.debugDisableAnimations  ? 'ce-debug-no-animations'        : '',
+    config.feedbackClickAnimation === false ? 'ce-feedback-no-pop' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -183,6 +184,32 @@ export function ConvEngineChat({
   const cdlb  = resolveColor(config.dateLabelBg);           if (cdlb)  configColors['date-chip-bg']      = cdlb;
   const cdlc  = resolveColor(config.dateLabelColor);        if (cdlc)  configColors['date-chip-color']   = cdlc;
   const cdlbd = resolveColor(config.dateLabelBorderColor);  if (cdlbd) configColors['date-chip-border']  = cdlbd;
+
+  // Attachment chip colors (composer file preview)
+  const cacb = resolveColor(config.attachmentChipBg);        if (cacb) configColors['attachment-chip-bg']     = cacb;
+  const cacd = resolveColor(config.attachmentChipBorder);    if (cacd) configColors['attachment-chip-border'] = cacd;
+  const caci = resolveColor(config.attachmentChipIconColor); if (caci) configColors['attachment-chip-icon']   = caci;
+  const cact = resolveColor(config.attachmentChipTextColor); if (cact) configColors['attachment-chip-text']   = cact;
+
+  // Message queue card colors — config.queueColors is an array of up to 5
+  // colors (plain strings or { light, dark } objects), cycled per card.
+  if (Array.isArray(config.queueColors)) {
+    config.queueColors.slice(0, 5).forEach((val, i) => {
+      const resolved = resolveColor(val);
+      if (resolved) configColors[`queue-color-${i + 1}`] = resolved;
+    });
+  }
+  const cqit = resolveColor(config.queueItemTextColor); if (cqit) configColors['queue-item-text'] = cqit;
+
+  // Feedback thumbs — independent green/red-ish colors for up vs down,
+  // each with its own resting (idle) color separate from the hover/active
+  // (voted) color. Icons themselves are already fully swappable via
+  // config.icons.ThumbUpIcon / ThumbDownIcon — no extra plumbing needed for
+  // that, since they use stroke="currentColor" and inherit these.
+  const cfuc  = resolveColor(config.feedbackUpColor);          if (cfuc)  configColors['feedback-up-color']          = cfuc;
+  const cfurc = resolveColor(config.feedbackUpRestingColor);   if (cfurc) configColors['feedback-up-resting-color']  = cfurc;
+  const cfdc  = resolveColor(config.feedbackDownColor);        if (cfdc)  configColors['feedback-down-color']        = cfdc;
+  const cfdrc = resolveColor(config.feedbackDownRestingColor); if (cfdrc) configColors['feedback-down-resting-color'] = cfdrc;
 
   // Merge: theme wins over config colors (explicit CSS var overrides take priority)
   const rootStyle = resolveThemeStyle({ ...configColors, ...theme }) ?? {};

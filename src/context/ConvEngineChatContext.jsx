@@ -192,6 +192,21 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       landingChipsShape:          config.landingChipsShape          ?? 'round',
       landingChipsAnchor:         config.landingChipsAnchor         ?? 'landingAgent',
       landingChipsAnchorPadding:  config.landingChipsAnchorPadding  ?? undefined,
+
+      // ── Message queue (Claude Code / Codex style) ───────────────────────
+      // Sending while a request is already in flight no longer drops the
+      // message — it's held in a queue (capped at maxQueuedMessages) and
+      // dispatched 1:1 as each prior request resolves. Rendered as a stack
+      // of cards above the composer; queueColors cycles per card so
+      // consecutive queued messages stay visually distinct.
+      maxQueuedMessages:  config.maxQueuedMessages  ?? 5,
+      queueColors:        Array.isArray(config.queueColors) ? config.queueColors : null,
+      queueItemTextColor: config.queueItemTextColor  ?? null,
+      // ── Attachment chip colors ──────────────────────────────────────────
+      attachmentChipBg:        config.attachmentChipBg        ?? null,
+      attachmentChipBorder:    config.attachmentChipBorder    ?? null,
+      attachmentChipIconColor: config.attachmentChipIconColor ?? null,
+      attachmentChipTextColor: config.attachmentChipTextColor ?? null,
     }),
     // Config values compared shallowly; stringify avoids over-rerendering on
     // inline object literals while still reacting to genuine changes.
@@ -215,6 +230,10 @@ export function ConvEngineChatProvider({ config = {}, children }) {
   const [isTyping,      setIsTyping]      = useState(false);
   const [progressText,  setProgressText]  = useState('');
   const [auditRevision, setAuditRevision] = useState(0);
+  // Pending "typed while a request was already in flight" messages — see
+  // useChat.js's sendMessage / drain effect. Lives here (not local to
+  // useChat) so an in-flight send-and-drain chain survives a mode switch.
+  const [messageQueue,  setMessageQueue]  = useState([]);
   const threadRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -247,10 +266,11 @@ export function ConvEngineChatProvider({ config = {}, children }) {
     progressText,  setProgressText,
     auditRevision, setAuditRevision,
     replyContext,  setReplyContext, clearReplyContext,
+    messageQueue,  setMessageQueue,
     threadRef,
     inputRef,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [messages, input, isTyping, progressText, auditRevision, replyContext]);
+  }), [messages, input, isTyping, progressText, auditRevision, replyContext, messageQueue]);
 
   return (
     <ConvEngineChatContext.Provider value={{ ...ctx, chatState }}>
