@@ -2010,6 +2010,93 @@
   animation: ce-pulse 1s ease-in-out infinite;
 }
 
+/* ── Audit search ──────────────────────────────────────────────────────────
+   One box, two jobs: typing narrows the trail on screen, Enter searches every
+   conversation the backend kept. Sits under the header so it stays put while
+   the trail scrolls. */
+.ce-chat-root .ce-audit-searchbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 7px 10px 0;
+  flex: 0 0 auto;
+}
+
+.ce-chat-root .ce-audit-search-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ce-text-primary);
+  background: var(--ce-bg-panel);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 7px;
+  padding: 4px 24px 4px 8px;
+  outline: none;
+  transition: border-color var(--ce-transition-fast), box-shadow var(--ce-transition-fast);
+}
+.ce-chat-root .ce-audit-search-input::placeholder { color: var(--ce-text-placeholder); }
+.ce-chat-root .ce-audit-search-input:focus {
+  border-color: var(--ce-color-accent);
+  box-shadow: 0 0 0 3px var(--ce-color-accent-light);
+}
+/* The UA's own search affordances clash with the themed clear button. */
+.ce-chat-root .ce-audit-search-input::-webkit-search-decoration,
+.ce-chat-root .ce-audit-search-input::-webkit-search-cancel-button { display: none; }
+
+.ce-chat-root .ce-audit-search-clear {
+  position: absolute;
+  right: 15px;
+  border: none;
+  background: transparent;
+  color: var(--ce-text-secondary);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 3px;
+  cursor: pointer;
+}
+.ce-chat-root .ce-audit-search-clear:hover { color: var(--ce-text-primary); }
+
+.ce-chat-root .ce-audit-searchnote {
+  flex: 0 0 auto;
+  padding: 5px 11px 0;
+  font-size: 10px;
+  color: var(--ce-text-secondary);
+}
+
+.ce-chat-root .ce-audit-back {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--ce-color-accent);
+  cursor: pointer;
+}
+.ce-chat-root .ce-audit-back:hover { text-decoration: underline; }
+.ce-chat-root .ce-audit-pinned-id {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 9px;
+}
+
+/* Which conversation a cross-conversation hit came from — a button, because
+   clicking it loads that whole trail. */
+.ce-chat-root .ce-audit-card-origin {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 9px;
+  color: var(--ce-text-secondary);
+  background: var(--ce-bg-header);
+  border-bottom: 1px solid var(--ce-border-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ce-chat-root .ce-audit-card-origin:hover { color: var(--ce-color-accent); }
+
 .ce-chat-root .ce-audit-scroll {
   flex: 1;
   overflow-y: auto;

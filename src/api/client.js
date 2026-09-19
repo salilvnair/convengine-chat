@@ -69,5 +69,38 @@ export function createApiClient(apiHost, apiEndpoints = {}) {
       if (!res.ok) throw new Error(`ConvEngine API error: ${res.status} ${res.statusText}`);
       return res.json();
     },
+
+    /**
+     * Searches audit rows ACROSS conversations — the panel's "find an older
+     * conversation" box, as opposed to filtering the trail already on screen.
+     *
+     * GET {auditBase}/search?q=…&limit=… , overridable as
+     * `apiEndpoints.auditSearch` for backends that expose it elsewhere.
+     * Either response shape is accepted:
+     *
+     *   [ { conversationId, auditId, stage, payloadJson, createdAt }, … ]
+     *   { results: [ … same … ], total?: number }
+     *
+     * i.e. plain audit rows, so a hit renders with the same card as the live
+     * trail rather than needing a second renderer.
+     *
+     * @param {string} query   free text matched against stage and payload
+     * @param {object} [opts]  { limit }
+     * @returns {Promise<{results: Array, total: number}>}
+     */
+    async searchAudit(query, { limit = 50 } = {}) {
+      const searchUrl = apiEndpoints?.auditSearch
+        ? String(apiEndpoints.auditSearch).replace(/\/+$/, '')
+        : `${url('audit')}/search`;
+      const qs = new URLSearchParams({ q: query ?? '', limit: String(limit) });
+      const res = await fetch(`${searchUrl}?${qs}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`ConvEngine API error: ${res.status} ${res.statusText}`);
+      const data = await res.json();
+      const results = Array.isArray(data) ? data : (data?.results ?? []);
+      return { results, total: data?.total ?? results.length };
+    },
   };
 }

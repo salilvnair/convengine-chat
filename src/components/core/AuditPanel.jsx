@@ -170,7 +170,7 @@ function Collapsible({ label, text, defaultOpen = false }) {
 
 /* ── Single audit entry ───────────────────────────────────────────────────── */
 
-function AuditEntry({ entry, index }) {
+function AuditEntry({ entry, index, showConversation = false, onOpenConversation }) {
   const [showRaw, setShowRaw] = useState(false);
   const stage = entry.stage ?? 'UNKNOWN';
   const meta  = stageMeta(stage);
@@ -200,6 +200,17 @@ function AuditEntry({ entry, index }) {
         </button>
         <span className="ce-audit-step-no">{index + 1}</span>
       </div>
+
+      {showConversation && entry.conversationId && (
+        <button
+          type="button"
+          className="ce-audit-card-origin"
+          title={`Open the full trail for ${entry.conversationId}`}
+          onClick={() => onOpenConversation?.(entry.conversationId)}
+        >
+          from {entry.conversationId} →
+        </button>
+      )}
 
       <div className="ce-audit-card-body">
         {showRaw ? (
@@ -234,11 +245,26 @@ function AuditEntry({ entry, index }) {
  * Refreshes automatically whenever `auditRevision` increments (new response).
  */
 export function AuditPanel({ auditRevision, onClose }) {
-  const { conversationId, apiClient } = useConvEngineChatContext();
+  const { conversationId, apiClient, config } = useConvEngineChatContext();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  // ── Search ───────────────────────────────────────────────────────────────
+  // Two different questions get asked of an audit trail, so the box answers
+  // both: typing narrows the trail already on screen (instant, no request),
+  // and Enter searches every conversation the backend has kept — which is the
+  // only way to reach a trail from an hour ago whose id nobody wrote down.
+  const showSearch = config?.showAuditSearch !== false;
+  const [query, setQuery] = useState('');
+  const [remote, setRemote] = useState(null); // { rows, total, query } | null
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  // A search hit can be from another conversation; opening one pins the panel
+  // to that trail until you go back to the live one.
+  const [pinned, setPinned] = useState(null); // { id, rows } | null
+  const viewingId = pinned?.id ?? conversationId;
 
   useEffect(() => {
     if (!conversationId) return;
@@ -269,6 +295,89 @@ export function AuditPanel({ auditRevision, onClose }) {
       setTimeout(() => setCopied(false), 1500);
     });
   };
+
+  /** Rows shown: a pinned trail, else remote hits, else the live trail. */
+  const source = pinned ? pinned.rows : (remote ? remote.rows : entries);
+
+  /** Loads another conversation's full trail from a search hit. */
+  const openConversation = async (id) => {
+    if (!id) return;
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const data = await apiClient.fetchAudit(id);
+      setPinned({ id, rows: Array.isArray(data) ? data : (data?.entries ?? []) });
+      setRemote(null);
+      // Opening a hit means "show me that whole conversation", so the query
+      // that found it must not then filter it back down to the matching rows.
+      setQuery('');
+    } catch (err) {
+      setSearchError(err.message);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const backToLive = () => {
+    setPinned(null);
+    setRemote(null);
+    setQuery('');
+    setSearchError(null);
+  };
+
+  /**
+   * Local narrowing — matches the stage name and the payload BODY.
+   *
+   * Deliberately excludes `_meta`: it carries a session snapshot whose
+   * stepInfos name every step run so far, so once GuardrailStep has executed,
+   * every later row contains the word "guardrail". Matching the envelope
+   * returned 56 of 82 rows for that query — technically correct, useless in
+   * practice. The body is what someone is actually looking for.
+   */
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || remote) return source;
+    return source.filter((e) => {
+      if (String(e.stage ?? '').toLowerCase().includes(q)) return true;
+      const parsed = parsePayload(e.payloadJson ?? e.payload_json ?? e.payload);
+      if (!parsed) return false;
+      const { _meta, ...body } = parsed;
+      return JSON.stringify(body).toLowerCase().includes(q);
+    });
+  }, [source, query, remote]);
+
+  const runRemoteSearch = async () => {
+    const q = query.trim();
+    if (!q) return;
+    if (typeof apiClient.searchAudit !== 'function') {
+      setSearchError('This backend build has no audit search endpoint.');
+      return;
+    }
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const { results, total } = await apiClient.searchAudit(q);
+      setRemote({ rows: results, total, query: q });
+    } catch (err) {
+      setSearchError(err.message);
+      setRemote(null);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setQuery('');
+    setRemote(null);
+    setSearchError(null);
+    setPinned(null);
+  };
+
+  /** Conversations represented in a remote result, for the summary line. */
+  const remoteConversations = useMemo(() => {
+    if (!remote) return 0;
+    return new Set(remote.rows.map((r) => r.conversationId).filter(Boolean)).size;
+  }, [remote]);
 
   return (
     <aside className="ce-audit-panel" aria-label="Audit trail">
@@ -315,13 +424,81 @@ export function AuditPanel({ auditRevision, onClose }) {
         </div>
       </div>
 
+      {showSearch && (
+        <div className="ce-audit-searchbar">
+          <input
+            type="search"
+            className="ce-audit-search-input"
+            placeholder="Filter this trail — Enter to search all conversations"
+            value={query}
+            aria-label="Search audit trail"
+            onChange={(e) => { setQuery(e.target.value); if (remote) setRemote(null); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); runRemoteSearch(); }
+              if (e.key === 'Escape') clearSearch();
+            }}
+          />
+          {(query || remote) && (
+            <button
+              type="button"
+              className="ce-audit-search-clear"
+              title="Clear search"
+              aria-label="Clear search"
+              onClick={clearSearch}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
+
+      {showSearch && (query || remote || searching || searchError) && (
+        <div className="ce-audit-searchnote">
+          {searching && <span>Searching all conversations…</span>}
+          {!searching && searchError && <span className="ce-audit-error-text">{searchError}</span>}
+          {!searching && !searchError && remote && (
+            <span>
+              {remote.total} match{remote.total === 1 ? '' : 'es'} for “{remote.query}”
+              {remoteConversations > 0 && ` across ${remoteConversations} conversation${remoteConversations === 1 ? '' : 's'}`}
+            </span>
+          )}
+          {!searching && !searchError && !remote && !pinned && query && (
+            <span>
+              {visible.length} of {entries.length} in this trail · press Enter to search older conversations
+            </span>
+          )}
+        </div>
+      )}
+
+      {pinned && (
+        <div className="ce-audit-searchnote">
+          <button type="button" className="ce-audit-back" onClick={backToLive}>
+            ← back to the live trail
+          </button>
+          <span className="ce-audit-pinned-id" title={pinned.id}> · viewing {pinned.id}</span>
+        </div>
+      )}
+
       <div className="ce-audit-scroll">
         {error && <p className="ce-audit-error">{error}</p>}
-        {!loading && !error && entries.length === 0 && (
+        {!loading && !error && entries.length === 0 && !remote && (
           <p className="ce-audit-empty">No audit entries yet — ask a question to see how the answer was built.</p>
         )}
-        {entries.map((entry, i) => (
-          <AuditEntry key={entry.auditId ?? entry.id ?? i} entry={entry} index={i} />
+        {!loading && !error && visible.length === 0 && (entries.length > 0 || remote) && (
+          <p className="ce-audit-empty">
+            {remote ? `Nothing matched “${remote.query}”.` : 'Nothing in this trail matches that.'}
+          </p>
+        )}
+        {visible.map((entry, i) => (
+          <AuditEntry
+            key={entry.auditId ?? entry.id ?? i}
+            entry={entry}
+            index={i}
+            // A hit from another conversation is only readable if it says which
+            // one it came from.
+            showConversation={Boolean(remote) && entry.conversationId !== viewingId}
+            onOpenConversation={openConversation}
+          />
         ))}
       </div>
     </aside>

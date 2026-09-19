@@ -113,6 +113,9 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       persistOrbPosition:    config.persistOrbPosition    ?? true,
       orbStorageKey:         config.orbStorageKey         ?? 'ce-chat-orb-pos',
       showEngineStatus:      config.showEngineStatus      ?? true,
+      // Audit panel search box — filters the open trail, and searches every
+      // conversation the backend kept when you press Enter.
+      showAuditSearch:       config.showAuditSearch       ?? true,
       // Reply-to-message affordance on assistant bubbles (Reply-style). The
       // reply icon appears on hover; clicking it quotes that bubble in the
       // composer and sends its text as inputParams.replySourceText.

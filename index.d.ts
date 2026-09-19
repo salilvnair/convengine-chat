@@ -71,6 +71,8 @@ export interface ConvEngineChatApiEndpoints {
   feedback?: string;
   /** Default: `/api/v1/conversation/audit` (/:conversationId appended automatically) */
   audit?: string;
+  /** Override for the audit SEARCH endpoint. Defaults to {audit}/search. */
+  auditSearch?: string;
   [key: string]: string | undefined;
 }
 
@@ -204,6 +206,9 @@ export interface ConvEngineChatConfig {
   /** The built-in FAB launcher (panel mode). Set `false` when you drive `open`
    *  from your own trigger. @default true */
   showFab?: boolean;
+  /** Search box in the audit panel. Typing filters the trail on screen; Enter
+   *  searches every conversation via the audit search endpoint. @default true */
+  showAuditSearch?: boolean;
   /** Panel mode + `draggable` prop only. How the orb behaves when released:
    *  - `'edgeSnap'`  — snaps to the nearest left/right edge (iOS AssistiveTouch style)
    *  - `'freeform'`  — stays exactly wherever it's dropped, anywhere on the page
