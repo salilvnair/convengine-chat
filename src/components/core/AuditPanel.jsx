@@ -1,33 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
 import { useIcons } from '../../hooks/useIcons.js';
+import { stageMeta } from './AuditStages.js';
 
-/* ── Stage meta ───────────────────────────────────────────────────────────────
- * The host app decides which stages to write; this panel gives the ones it
- * knows a human label, an accent colour, and a purpose-built card body. An
- * LLM-baked chat only really cares about three: what the user asked, what we
- * sent the model, and what the model answered. Anything else falls back to a
- * generic JSON card so nothing is ever silently dropped.
+/* ── Rendering strategy ──────────────────────────────────────────────────────
+ * The engine writes 100+ distinct stages, each with its own payload shape, and
+ * the list grows. Hand-writing a card per stage does not scale and leaves every
+ * new stage rendering as a raw JSON dump — which is what this panel used to do
+ * for everything except three LLM stages the engine does not even emit.
+ *
+ * So cards are built from the payload's SHAPE instead of its stage:
+ *   - short scalars       → a labelled chip (intent, state, confidence, …)
+ *   - the headline field  → the card's prose line (question / answer / error)
+ *   - long text & objects → a collapsed disclosure, opened on demand
+ * Nothing is dropped: `{ }` on any card swaps in the raw payload.
+ *
+ * The result is that a stage nobody has seen before still reads as a card, and
+ * the stages people read constantly (USER_INPUT, ASSISTANT_OUTPUT) read well.
  */
-const STAGE_META = {
-  USER_INPUT: { label: 'You asked', color: '#0ea5e9', kind: 'user' },
-  LLM_INPUT: { label: 'Sent to the model', color: '#f59e0b', kind: 'input' },
-  LLM_OUTPUT: { label: 'Model answer', color: '#22c55e', kind: 'output' },
-  LLM_ERROR: { label: 'Error', color: '#ef4444', kind: 'error' },
-  // Legacy / framework stages still render (generic card) if a host emits them.
-  MCP_TOOL_RESULT: { label: 'Tool result', color: '#14b8a6', kind: 'generic' },
-  MCP_FINAL_ANSWER: { label: 'Final answer', color: '#22c55e', kind: 'generic' },
-  MCP_TOOL_ERROR: { label: 'Error', color: '#ef4444', kind: 'error' },
-};
-
-function stageMeta(stage) {
-  return STAGE_META[stage] ?? { label: stage || 'Step', color: '#94a3b8', kind: 'generic' };
-}
 
 function parsePayload(raw) {
-  if (!raw) return null;
+  if (raw == null || raw === '') return null;
+  if (typeof raw === 'object') return raw;
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // A payload can legitimately be a bare string or number.
+    return (parsed && typeof parsed === 'object') ? parsed : { _text: String(parsed) };
   } catch {
     return { _text: String(raw) };
   }
@@ -41,27 +39,120 @@ function prettyJson(value) {
   }
 }
 
+/* The field that becomes the card's prose line, in priority order. The engine
+   is not consistent about this (text / userText / question / output / answer),
+   and being generous here is what keeps the common cards readable. */
+const HEADLINE_KEYS = ['text', 'question', 'userText', 'answer', 'output', 'final_answer', 'message'];
+const ERROR_KEYS    = ['error', 'errorMessage', 'exception', 'errorCode'];
+
+/* Keys pulled to the front of the chip row — the engine's own vocabulary for
+   "what did this step decide". Everything else keeps payload order. */
+const LEAD_KEYS = [
+  'intent', 'state', 'resolvedIntent', 'previousIntent', 'source',
+  'dialogueAct', 'policyDecision', 'result', 'confidence',
+  'ruleId', 'action', 'tool_code', 'outputFormat', 'responseType', 'totalMs',
+];
+
+/* Longer than this and a value gets its own disclosure instead of a chip. */
+const CHIP_MAX_LEN = 48;
+
+/* A headline is prose. Past this length, or when the "prose" is really an
+   encoded payload (ASSISTANT_OUTPUT carries a JSON string when outputFormat is
+   JSON), it belongs in a disclosure — a 2,000-character blob of escaped JSON
+   set as a paragraph is exactly what made this panel unreadable. */
+const HEADLINE_MAX_LEN = 260;
+
+function looksEncoded(text) {
+  const t = text.trim();
+  return (t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'));
+}
+
+function isScalar(v) {
+  return v === null || ['string', 'number', 'boolean'].includes(typeof v);
+}
+
+/** Splits a payload into { headline, error, chips, blocks } for rendering. */
+function planCard(data) {
+  const entries = Object.entries(data ?? {});
+
+  let headline = null;
+  let headlineKey = null;
+  for (const key of HEADLINE_KEYS) {
+    const v = data?.[key];
+    if (typeof v === 'string' && v.trim()) { headline = v; headlineKey = key; break; }
+  }
+
+  let error = null;
+  for (const key of ERROR_KEYS) {
+    const v = data?.[key];
+    if (typeof v === 'string' && v.trim()) { error = v; break; }
+  }
+
+  const chips  = [];
+  const blocks = [];
+
+  // Demote a headline that is too long, or that is an encoded payload rather
+  // than a sentence, into a disclosure instead of a paragraph.
+  if (headline && (headline.length > HEADLINE_MAX_LEN || looksEncoded(headline))) {
+    const pretty = looksEncoded(headline)
+      ? (() => { try { return prettyJson(JSON.parse(headline)); } catch { return headline; } })()
+      : headline;
+    blocks.push({ key: headlineKey, text: pretty });
+    headline = null;
+  }
+
+  for (const [key, value] of entries) {
+    if (key === headlineKey || key === '_text') continue;
+    // Drop empties rather than printing a wall of nulls — `{ }` still has them.
+    if (value === null || value === undefined || value === '') continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    if (!isScalar(value) && !Array.isArray(value) && Object.keys(value).length === 0) continue;
+
+    if (isScalar(value)) {
+      const text = String(value);
+      if (text.length <= CHIP_MAX_LEN) chips.push({ key, value: text, raw: value });
+      else blocks.push({ key, text });
+    }
+    else {
+      blocks.push({ key, text: prettyJson(value) });
+    }
+  }
+
+  // Lead keys first, in the order listed; the rest keep payload order.
+  chips.sort((a, b) => {
+    const ia = LEAD_KEYS.indexOf(a.key);
+    const ib = LEAD_KEYS.indexOf(b.key);
+    if (ia === -1 && ib === -1) return 0;
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  if (!headline && typeof data?._text === 'string') headline = data._text;
+
+  return { headline, error, chips, blocks };
+}
+
 /* ── Small building blocks ───────────────────────────────────────────────── */
 
 function StageDot({ color }) {
   return <span className="ce-audit-dot" style={{ background: color }} aria-hidden />;
 }
 
-function Pill({ children, color }) {
+/** A labelled key/value chip. Booleans get a tone so true/false reads at a glance. */
+function Chip({ label, value, raw }) {
+  const tone = typeof raw === 'boolean' ? (raw ? 'is-true' : 'is-false') : '';
   return (
-    <span
-      className="ce-audit-pill"
-      style={color ? { color, background: `color-mix(in srgb, ${color} 14%, transparent)`, borderColor: `color-mix(in srgb, ${color} 30%, transparent)` } : undefined}
-    >
-      {children}
+    <span className={`ce-audit-chip ${tone}`}>
+      <span className="ce-audit-chip-key">{label}</span>
+      <span className="ce-audit-chip-val">{value}</span>
     </span>
   );
 }
 
-/** A long value (a prompt, the assembled context) shown collapsed with a
- *  one-click expand — so LLM_INPUT never dumps thousands of characters inline. */
-function Collapsible({ label, text }) {
-  const [open, setOpen] = useState(false);
+/** A long value (prompt, context, SQL, tool rows) shown collapsed. */
+function Collapsible({ label, text, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
   const { ChevronDownIcon } = useIcons();
   const value = typeof text === 'string' ? text : prettyJson(text);
   if (!value || !value.trim()) return null;
@@ -77,113 +168,60 @@ function Collapsible({ label, text }) {
   );
 }
 
-function Field({ label, children }) {
-  if (children == null || children === '') return null;
-  return (
-    <div className="ce-audit-field">
-      <span className="ce-audit-field-label">{label}</span>
-      <div className="ce-audit-field-value">{children}</div>
-    </div>
-  );
-}
+/* ── Single audit entry ───────────────────────────────────────────────────── */
 
-/* ── Per-stage card bodies ───────────────────────────────────────────────── */
-
-function UserBody({ data }) {
-  return (
-    <>
-      <p className="ce-audit-question">{data.question || data._text || '—'}</p>
-      {data.project && data.project !== '(all)' && <Pill>project: {data.project}</Pill>}
-    </>
-  );
-}
-
-function InputBody({ data }) {
-  return (
-    <>
-      <div className="ce-audit-tagrow">
-        {data.model && <Pill color="#f59e0b">{data.model}</Pill>}
-        {data.intent && <Pill>intent: {data.intent}</Pill>}
-        {Array.isArray(data.sources) && data.sources.length > 0 && (
-          <Pill>{data.sources.length} source{data.sources.length === 1 ? '' : 's'}</Pill>
-        )}
-      </div>
-      <Collapsible label="System prompt" text={data.system_prompt} />
-      <Collapsible label="User prompt / retrieved context" text={data.user_prompt} />
-    </>
-  );
-}
-
-function OutputBody({ data }) {
-  const conf = typeof data.confidence === 'number' ? data.confidence : null;
-  const confColor = conf == null ? null : conf >= 0.7 ? '#22c55e' : conf >= 0.4 ? '#f59e0b' : '#ef4444';
-  const keyPoints = Array.isArray(data.key_points) ? data.key_points : [];
-  const caveats = Array.isArray(data.caveats) ? data.caveats : [];
-  return (
-    <>
-      <div className="ce-audit-tagrow">
-        {data.answerProvenance && <Pill color={data.answerProvenance === 'inferred' ? '#22c55e' : '#94a3b8'}>{data.answerProvenance === 'inferred' ? 'AI-synthesized' : 'from context'}</Pill>}
-        {conf != null && <Pill color={confColor}>confidence {(conf * 100).toFixed(0)}%</Pill>}
-      </div>
-      {data.headline && <p className="ce-audit-headline">{data.headline}</p>}
-      {data.answer && <p className="ce-audit-answer">{data.answer}</p>}
-      {keyPoints.length > 0 && (
-        <Field label={`Key findings (${keyPoints.length})`}>
-          <ul className="ce-audit-list">
-            {keyPoints.map((kp, i) => (
-              <li key={i}>{typeof kp === 'string' ? kp : kp.point}</li>
-            ))}
-          </ul>
-        </Field>
-      )}
-      {caveats.length > 0 && (
-        <Field label="Not established">
-          <ul className="ce-audit-list ce-audit-list--muted">
-            {caveats.map((c, i) => <li key={i}>{c}</li>)}
-          </ul>
-        </Field>
-      )}
-    </>
-  );
-}
-
-function ErrorBody({ data }) {
-  return <p className="ce-audit-answer ce-audit-error-text">{data.error || data._text || 'Unknown error'}</p>;
-}
-
-function GenericBody({ data }) {
-  return <pre className="ce-audit-pre">{prettyJson(data)}</pre>;
-}
-
-const BODIES = { user: UserBody, input: InputBody, output: OutputBody, error: ErrorBody, generic: GenericBody };
-
-/* ── Single audit entry (a designed card, not a raw JSON dump) ─────────────── */
 function AuditEntry({ entry, index }) {
   const [showRaw, setShowRaw] = useState(false);
   const stage = entry.stage ?? 'UNKNOWN';
-  const meta = stageMeta(stage);
-  const data = parsePayload(entry.payloadJson ?? entry.payload_json ?? entry.payload) ?? {};
-  const Body = BODIES[meta.kind] ?? GenericBody;
+  const meta  = stageMeta(stage);
+  const data  = useMemo(
+    () => parsePayload(entry.payloadJson ?? entry.payload_json ?? entry.payload) ?? {},
+    [entry],
+  );
+  const plan  = useMemo(() => planCard(data), [data]);
+
+  const isUser = meta.base === 'USER_INPUT';
+  const empty  = !plan.headline && !plan.error && !plan.chips.length && !plan.blocks.length;
 
   return (
-    <div className="ce-audit-card" style={{ borderLeftColor: meta.color }}>
+    <div className={`ce-audit-card ${meta.isError ? 'is-error' : ''}`} style={{ borderLeftColor: meta.color }}>
       <div className="ce-audit-card-head">
         <StageDot color={meta.color} />
         <span className="ce-audit-card-title">{meta.label}</span>
+        {meta.sub && <span className="ce-audit-substage" title={stage}>{meta.sub}</span>}
+        <span className="ce-audit-head-spacer" />
+        <button
+          type="button"
+          className={`ce-audit-raw-toggle ${showRaw ? 'is-active' : ''}`}
+          title={showRaw ? 'Hide raw payload' : `Show raw payload — ${stage}`}
+          onClick={() => setShowRaw((v) => !v)}
+        >
+          {'{ }'}
+        </button>
         <span className="ce-audit-step-no">{index + 1}</span>
-        {meta.kind !== 'generic' && (
-          <button
-            type="button"
-            className={`ce-audit-raw-toggle ${showRaw ? 'is-active' : ''}`}
-            title={showRaw ? 'Hide raw payload' : 'Show raw payload'}
-            onClick={() => setShowRaw((v) => !v)}
-          >
-            {'{ }'}
-          </button>
-        )}
       </div>
+
       <div className="ce-audit-card-body">
-        {showRaw ? <pre className="ce-audit-pre">{prettyJson(data)}</pre> : <Body data={data} />}
+        {showRaw ? (
+          <>
+            <span className="ce-audit-raw-stage">{stage}</span>
+            <pre className="ce-audit-pre ce-audit-pre--raw">{prettyJson(data)}</pre>
+          </>
+        ) : (
+          <>
+            {plan.error && <p className="ce-audit-answer ce-audit-error-text">{plan.error}</p>}
+            {plan.headline && (
+              <p className={isUser ? 'ce-audit-question' : 'ce-audit-answer'}>{plan.headline}</p>
+            )}
+            {plan.chips.length > 0 && (
+              <div className="ce-audit-tagrow">
+                {plan.chips.map((c) => <Chip key={c.key} label={c.key} value={c.value} raw={c.raw} />)}
+              </div>
+            )}
+            {plan.blocks.map((b) => <Collapsible key={b.key} label={b.key} text={b.text} />)}
+            {empty && <p className="ce-audit-muted">No payload.</p>}
+          </>
+        )}
       </div>
     </div>
   );
@@ -283,7 +321,7 @@ export function AuditPanel({ auditRevision, onClose }) {
           <p className="ce-audit-empty">No audit entries yet — ask a question to see how the answer was built.</p>
         )}
         {entries.map((entry, i) => (
-          <AuditEntry key={entry.id ?? i} entry={entry} index={i} />
+          <AuditEntry key={entry.auditId ?? entry.id ?? i} entry={entry} index={i} />
         ))}
       </div>
     </aside>

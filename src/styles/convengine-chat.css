@@ -2026,6 +2026,11 @@
   border-left: 3px solid #94a3b8;
   background: var(--ce-bg-panel);
   overflow: hidden;
+  /* The scroll container is a flex column, so cards would otherwise inherit
+     flex-shrink: 1 and be squashed to fit the viewport — with overflow: hidden
+     above, that silently CLIPS each card's content mid-row. Every card must
+     keep its natural height and let the container scroll instead. */
+  flex: 0 0 auto;
 }
 
 .ce-chat-root .ce-audit-card-head {
@@ -2045,6 +2050,12 @@
   font-weight: 700;
   color: var(--ce-text-primary);
   letter-spacing: 0.01em;
+  /* Long labels ellipsize instead of shoving the step number off the card. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .ce-chat-root .ce-audit-step-no {
@@ -2085,6 +2096,88 @@
 }
 
 .ce-chat-root .ce-audit-tagrow { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* ── Key/value chip ───────────────────────────────────────────────────────
+   Every stage payload is a bag of keys, so the chip carries its own label:
+   "intent CANNED_FUZZY" reads without a legend, where a bare value does not.
+   The key half is recessed so the row scans as values with context, rather
+   than as an even wall of text. */
+.ce-chat-root .ce-audit-chip {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--ce-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 17px;
+  max-width: 100%;
+}
+.ce-chat-root .ce-audit-chip-key {
+  padding: 0 5px;
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 9.5px;
+  color: var(--ce-text-secondary);
+  background: var(--ce-bg-header);
+  border-right: 1px solid var(--ce-border-color);
+  white-space: nowrap;
+}
+.ce-chat-root .ce-audit-chip-val {
+  padding: 0 6px;
+  font-weight: 600;
+  color: var(--ce-text-primary);
+  background: var(--ce-bg-panel);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Booleans carry their own verdict — true/false is the whole message. */
+.ce-chat-root .ce-audit-chip.is-true  .ce-audit-chip-val { color: #16a34a; }
+.ce-chat-root .ce-audit-chip.is-false .ce-audit-chip-val { color: var(--ce-text-secondary); }
+.ce-chat-root[data-ce-theme="dark"] .ce-audit-chip.is-true .ce-audit-chip-val { color: #4ade80; }
+
+/* The variable half of a dynamic stage — withStage("RulesStep") and
+   INTENT_RESOLVED_BY_<SOURCE> — kept out of the title so the title stays
+   stable and groupable. */
+.ce-chat-root .ce-audit-substage {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ce-text-secondary);
+  background: var(--ce-bg-header);
+  border: 1px solid var(--ce-border-color);
+  border-radius: 5px;
+  padding: 0 4px;
+  line-height: 14px;
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.ce-chat-root .ce-audit-head-spacer { flex: 1 1 auto; min-width: 4px; }
+
+/* The exact stage constant, shown only while the raw payload is open — that is
+   the one moment you care what the enum actually said. */
+.ce-chat-root .ce-audit-raw-stage {
+  font-family: "SF Mono", "Consolas", "Monaco", monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ce-color-accent);
+  word-break: break-all;
+}
+
+.ce-chat-root .ce-audit-muted {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ce-text-secondary);
+  font-style: italic;
+}
+
+/* An error stage tints its whole card, not just the dot. */
+.ce-chat-root .ce-audit-card.is-error {
+  background: color-mix(in srgb, var(--ce-color-error) 4%, var(--ce-bg-panel));
+}
 
 .ce-chat-root .ce-audit-pill {
   font-size: 9.5px;
