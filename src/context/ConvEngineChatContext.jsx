@@ -116,6 +116,11 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       // Audit panel search box — filters the open trail, and searches every
       // conversation the backend kept when you press Enter.
       showAuditSearch:       config.showAuditSearch       ?? true,
+      // Header button that opens the full-page Audit Explorer (AuditExplorer)
+      // in a new tab, deep-linked to this conversation. Off until you point it
+      // somewhere: auditExplorerUrl, or onOpenAuditExplorer for in-app routing.
+      showAuditExplorer:     config.showAuditExplorer     ?? false,
+      auditExplorerUrl:      config.auditExplorerUrl      ?? null,
       // Reply-to-message affordance on assistant bubbles (Reply-style). The
       // reply icon appears on hover; clicking it quotes that bubble in the
       // composer and sends its text as inputParams.replySourceText.

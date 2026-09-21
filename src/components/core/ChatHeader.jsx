@@ -1,4 +1,5 @@
 import { useIcons } from '../../hooks/useIcons.js';
+import { AuditExplorerButton } from './AuditExplorerButton.jsx';
 
 /**
  * Top bar of the chat panel / fullscreen mode.
@@ -50,6 +51,7 @@ export function ChatHeader({
             <NewChatIcon />
           </button>
         )}
+        <AuditExplorerButton />
         {showAudit && (
           <button
             type="button"

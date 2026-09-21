@@ -24,6 +24,8 @@
 - [Custom Renderers](#custom-renderers)
 - [Actions API](#actions-api)
 - [Hooks](#hooks)
+- [Audit Explorer](#audit-explorer)
+  - [Audit search endpoint (ConvEngine 2.x.x)](#audit-search-endpoint-convengine-2xx)
 - [Publishing to npm (Developer Guide)](#publishing-to-npm)
 
 ---
@@ -1147,6 +1149,296 @@ function HelpButton() {
 ---
 
 ---
+
+## Audit Explorer
+
+`<AuditExplorer />` is a full-page search and inspection UI for ConvEngine audit trails. Where the in-chat audit panel shows one conversation, the explorer answers *what went in, what came out, and why* across many:
+
+- **Search landing** — one search box, recent conversations as cards, and one-click starting points (failed conversations, LLM calls, intent/state changes).
+- **Timeline** — conversation → turn → every audit row, with the stage family, severity, and the intent/state chips that light up where they changed.
+- **Pipeline waterfall** — every step of the selected turn, scaled to its duration, with LLM and failing steps marked.
+- **Inspector › In → Out** — for an LLM stage, the prompt sent beside the reply received, paired automatically. For any row, the step's intent/state entering vs leaving and what it added to `inputParams`. For the turn, what the user said and what came back.
+- **Metadata** — the `_meta` envelope: step info, session flags, and `inputParams` changed at this row plus the full set.
+
+```jsx
+import { AuditExplorer } from '@salilvnair/convengine-chat';
+import '@salilvnair/convengine-chat/style.css';
+
+export default function AuditPage() {
+  return (
+    <div style={{ height: '100vh' }}>
+      <AuditExplorer config={{ apiHost: 'http://localhost:8080' }} />
+    </div>
+  );
+}
+```
+
+The explorer fills its container — give the parent a height.
+
+### How it loads data
+
+1. `GET {audit}/search` decides **which conversations** match (see [Audit search endpoint](#audit-search-endpoint-convengine-2xx)).
+2. `GET {audit}/{conversationId}` loads each one's **full trail**.
+
+The second step is not optional: pairing a prompt with its reply, or showing what a step changed, needs the whole turn, not just the rows that matched. Trails are cached per conversation until **Refresh**.
+
+**Search tips**
+
+| Type | Matches |
+|---|---|
+| Free text — `income`, `loan` | Stage names and payload **bodies**. The `_meta` envelope is deliberately excluded: it repeats the user's text and names every step run so far, so matching it would make every later row in the conversation a hit. |
+| A stage — `SCHEMA_STATUS`, `RULE_MATCH` | That stage, including its `withStage()` forms like `RULE_MATCH (RulesStep)`. |
+| A conversation id — whole, or its first 8+ characters | That conversation. A **full** id is loaded directly by id, so it works even on a backend with no search endpoint. |
+
+### Opening it from the chat widget
+
+Add a header button that opens the explorer in a new tab, deep-linked to the conversation you're in:
+
+```jsx
+<ConvEngineChat
+  config={{
+    showAuditExplorer: true,
+    auditExplorerUrl:  '/audit',   // opened as /audit?conversationId=<current>
+  }}
+/>
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `showAuditExplorer` | `boolean` | `false` | Show the "Open Audit Explorer" header button (panel, sidepanel and fullscreen). |
+| `auditExplorerUrl` | `string` | — | Where the explorer lives. Relative or absolute. |
+| `onOpenAuditExplorer` | `(conversationId) => void` | — | Handle the click yourself (in-app routing). Wins over `auditExplorerUrl`. |
+| `auditExplorerTarget` | `string` | `'_blank'` | `window.open` target. |
+| `auditExplorerParam` | `string` | `'conversationId'` | Query parameter the current conversation id is written to. |
+| `auditExplorerLinkConversation` | `boolean` | `true` | `false` opens the URL without the conversation id. |
+| `auditExplorerLabel` | `string` | `'Open Audit Explorer'` | Button tooltip / aria-label. |
+
+The icon is `AuditExplorerIcon` — override it through `config.icons` like any other.
+
+On the explorer page, read the id back and pass it on:
+
+```jsx
+const conversationId = new URLSearchParams(location.search).get('conversationId') ?? undefined;
+<AuditExplorer config={{ apiHost, conversationId }} />
+```
+
+### Explorer config
+
+**Data**
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `apiHost` | `string` | `''` | Backend base URL. Same-origin when empty. |
+| `apiEndpoints` | `object` | — | Same overrides as the chat widget — `audit`, `auditSearch`. |
+| `rows` | `CeAudit[]` | — | Static rows. Skips all fetching — handy for tests, fixtures and offline review. |
+| `conversationId` | `string` | — | Open straight on one conversation (skips the landing page). |
+| `conversationIds` | `string[]` | `[]` | Always load these, in addition to search results. |
+| `initialQuery` | `string` | `''` | Start with a search (skips the landing page). |
+| `limit` | `number` | `200` | Rows per search page. |
+| `searchPageLimit` | `number` | `5` | Most search pages read to find enough conversations. One real conversation is ~85 rows, so one page names only two or three. |
+| `maxConversations` | `number` | `12` | Most conversations loaded at once. |
+| `defaultFilters` | `object` | — | Starting filters: `outcome`, `hideSteps`, `errorsOnly`, `llmOnly`, `changedOnly`, `inputParamsChanged`, `minPayloadKb`, `families`, `intents`, `states`, `conversations`. |
+
+**Layout — every section can be switched off**
+
+| Key | Default | | Key | Default |
+|---|---|---|---|---|
+| `showLanding` | `true` | | `showFilters` | `true` |
+| `showSearch` | `true` | | `showWaterfall` | `true` |
+| `showKpis` | `true` | | `showInspector` | `true` |
+| `showApiReadout` | `true` | | `showRefresh` | `true` |
+| `keyboardShortcuts` | `true` | | `inspectorTabs` | `['io','body','meta','raw']` |
+| `defaultTab` | `'io'` | | `height` | `'100%'` |
+
+**Text**
+
+| Key | Default |
+|---|---|
+| `title` | `'Audit Explorer'` |
+| `subtitle` | rows / conversations loaded |
+| `landingTitle` | `'Search your conversations'` |
+| `landingSubtitle` | a one-line explanation |
+| `landingExamples` | `['SCHEMA_STATUS','RULE_MATCH','INTENT_AGENT','failure']` |
+| `landingRecentLimit` | `9` |
+| `landingQuickFilters` | `true` |
+
+**Stages**
+
+| Key | Type | Description |
+|---|---|---|
+| `stageLabels` | `Record<string,string>` | Rename stages: `{ SCHEMA_STATUS: 'Slots' }`. |
+| `familyColors` | `Record<string,string>` | Recolour a family: `{ agent: '#f97316' }`. |
+| `classifyStage` | `(base) => family \| null` | Take over classification for your own stages. |
+
+**Callbacks** — `onSelectRow(row)`, `onFiltersChange(filters)`, `onViewChange('landing' \| 'explore')`, `onError(err)`.
+
+### Palettes and colours
+
+Four built-in palettes, each with a light and a dark variant:
+
+| `palette` | Look |
+|---|---|
+| `'aurora'` *(default)* | violet into pink on plum ink |
+| `'lagoon'` | teal into sky on deep sea green |
+| `'ember'` | orange into rose on roasted brown |
+| `'indigo'` | the chat widget's own indigo/slate — for a matched pair |
+
+```jsx
+<AuditExplorer config={{ palette: 'lagoon', colorScheme: 'dark' }} />
+```
+
+`colorScheme` is `'light' | 'dark'`; omit it to follow the OS. `defaultDark` works as it does on the widget.
+
+Precedence matches `ConvEngineChat` — **palette → colour shorthands → `theme` prop**, most specific wins:
+
+```jsx
+<AuditExplorer
+  config={{
+    palette: { dark: { accent: '#22d3ee', accent2: '#a78bfa' } },   // partial palette, merged over paletteBase
+    paletteBase: 'aurora',
+    accentColor: { light: '#0e7490', dark: '#22d3ee' },            // shorthand, string or { light, dark }
+    errorColor: '#f43f5e',
+    fontFamily: 'Inter, sans-serif',
+    monoFontFamily: 'JetBrains Mono, monospace',
+    loadFonts: false,                                               // skip the IBM Plex <link> (strict CSP)
+  }}
+  theme={{ 'ax-radius': '14px', 'ax-inspector-width': '520px' }}   // auto-prefixed with --ce-
+/>
+```
+
+Colour shorthands: `accentColor`, `accentColor2`, `groundColor`, `surfaceColor`, `surfaceAltColor`, `textColor`, `secondaryTextColor`, `mutedTextColor`, `borderColor`, `borderStrongColor`, `codeBgColor`, `okColor`, `warnColor`, `errorColor`, `llmColor`.
+
+CSS variables (`theme` keys drop the leading `--ce-`): `--ce-ax-ground`, `-surface`, `-surface-2`, `-ink`, `-ink-2`, `-muted`, `-line`, `-line-2`, `-accent`, `-accent-2`, `-accent-ink`, `-code-bg`, `-string`, `-number`, `-ok`, `-warn`, `-err`, `-llm`, `-glow` (set `transparent` to drop the ambient glow), `-radius`, `-gutter`, `-font-size`, `-filters-width`, `-inspector-width`, `-sans`, `-mono`.
+
+The palettes are exported as `AUDIT_EXPLORER_PALETTES` if you want to build a picker.
+
+### Audit search endpoint (ConvEngine 2.x.x)
+
+> **If you are on ConvEngine library `2.x.x`, the engine has no audit search route.** It exposes `GET /audit/{conversationId}` and `GET /audit/{conversationId}/trace` only. Add the controller below to your Spring Boot app to enable search in the Audit Explorer and the audit panel.
+
+Without it, `/api/v1/conversation/audit/search` is read as `/audit/{conversationId}` with a conversation id of `"search"`, which fails UUID parsing — so it answers **400 Bad Request**, not 404. The explorer detects this and still works for a pasted full conversation id, but the landing page and free-text search need the endpoint.
+
+**Contract**
+
+```
+GET /api/v1/conversation/audit/search?q=&limit=  →  { results: [CeAudit…], total }
+```
+
+Rows come back in exactly the shape of `GET /audit/{conversationId}` — `auditId`, `conversationId`, `stage`, `payloadJson` (a string), `createdAt` — newest first.
+
+| Param | Description |
+|---|---|
+| `q` | Free text over stage and payload body (`_meta` excluded). Empty returns the newest rows. 8+ hex characters match a conversation id prefix. |
+| `limit`, `offset` | Paging. `limit` is capped at 500. |
+| `stage` | Comma list. Exact, or the name of a `withStage()` form — `RULE_MATCH` also matches `RULE_MATCH (RulesStep)`. |
+| `conversationId` | One conversation. |
+| `intent`, `state` | As recorded in `_meta` at the time of the row. |
+| `since`, `until` | ISO-8601 instants. |
+| `errorsOnly` | Stages that name a failure. |
+
+**Controller** — drop into any package your app component-scans. PostgreSQL; it uses `jsonb` operators to leave `_meta` out of text matching.
+
+```java
+package com.example.audit;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.OffsetDateTime;
+import java.util.*;
+import java.util.regex.Pattern;
+
+@RestController
+@RequestMapping("/api/v1/conversation/audit")
+@RequiredArgsConstructor
+public class AuditSearchController {
+
+    private static final int MAX_LIMIT = 500;
+    /** 8+ hex chars and dashes: strict enough that an ordinary word is never read as an id. */
+    private static final Pattern CONVERSATION_ID_PREFIX = Pattern.compile("^[0-9a-fA-F]{8}[0-9a-fA-F-]{0,28}$");
+
+    private final NamedParameterJdbcTemplate jdbc;
+
+    // A literal "/search" outranks the engine's "/{conversationId}" pattern, so
+    // this handler wins without touching the engine.
+    @GetMapping("/search")
+    public Map<String, Object> search(
+            @RequestParam(name = "q", defaultValue = "") String q,
+            @RequestParam(name = "limit", defaultValue = "50") int limit,
+            @RequestParam(name = "offset", defaultValue = "0") int offset,
+            @RequestParam(name = "stage", required = false) String stage,
+            @RequestParam(name = "conversationId", required = false) UUID conversationId,
+            @RequestParam(name = "intent", required = false) String intent,
+            @RequestParam(name = "state", required = false) String state,
+            @RequestParam(name = "since", required = false) OffsetDateTime since,
+            @RequestParam(name = "until", required = false) OffsetDateTime until,
+            @RequestParam(name = "errorsOnly", defaultValue = "false") boolean errorsOnly) {
+
+        List<String> where = new ArrayList<>();
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        String query = q == null ? "" : q.trim();
+        if (!query.isEmpty() && CONVERSATION_ID_PREFIX.matcher(query).matches()) {
+            where.add("conversation_id::text ILIKE :idPrefix");
+            params.addValue("idPrefix", query.toLowerCase() + "%");
+        } else if (!query.isEmpty()) {
+            // _meta is excluded: it repeats the user's text and names every step
+            // run so far, so matching it makes every later row a hit.
+            where.add("(stage ILIKE :like ESCAPE '\\' OR (payload_json - '_meta')::text ILIKE :like ESCAPE '\\')");
+            params.addValue("like", "%" + escapeLike(query) + "%");
+        }
+        if (stage != null && !stage.isBlank()) {
+            List<String> ors = new ArrayList<>();
+            List<String> stages = Arrays.stream(stage.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+            for (int i = 0; i < stages.size(); i++) {
+                ors.add("(stage = :stage" + i + " OR stage LIKE :stagePrefix" + i + ")");
+                params.addValue("stage" + i, stages.get(i));
+                params.addValue("stagePrefix" + i, escapeLike(stages.get(i)) + " (%");
+            }
+            if (!ors.isEmpty()) where.add("(" + String.join(" OR ", ors) + ")");
+        }
+        if (conversationId != null) { where.add("conversation_id = :cid"); params.addValue("cid", conversationId); }
+        if (intent != null && !intent.isBlank()) { where.add("payload_json -> '_meta' ->> 'intent' = :intent"); params.addValue("intent", intent.trim()); }
+        if (state != null && !state.isBlank()) { where.add("payload_json -> '_meta' ->> 'state' = :state"); params.addValue("state", state.trim()); }
+        if (since != null) { where.add("created_at >= :since"); params.addValue("since", since); }
+        if (until != null) { where.add("created_at <= :until"); params.addValue("until", until); }
+        if (errorsOnly) where.add("stage ~ '(ERROR|FAILURE|FAILED|VIOLATION|DENY|REJECTED|NOT_FOUND|POLICY_BLOCK)'");
+
+        String whereSql = where.isEmpty() ? "" : " WHERE " + String.join(" AND ", where);
+        Long total = jdbc.queryForObject("SELECT COUNT(*) FROM ce_audit" + whereSql, params, Long.class);
+
+        params.addValue("limit", Math.max(1, Math.min(limit, MAX_LIMIT)));
+        params.addValue("offset", Math.max(0, offset));
+        List<Map<String, Object>> results = jdbc.query(
+                "SELECT audit_id, conversation_id, stage, payload_json::text AS payload_json, created_at"
+                        + " FROM ce_audit" + whereSql + " ORDER BY audit_id DESC LIMIT :limit OFFSET :offset",
+                params,
+                (rs, n) -> {
+                    Map<String, Object> row = new LinkedHashMap<>();   // same keys as CeAudit JSON
+                    row.put("auditId", rs.getLong("audit_id"));
+                    row.put("conversationId", rs.getObject("conversation_id", UUID.class));
+                    row.put("stage", rs.getString("stage"));
+                    row.put("payloadJson", rs.getString("payload_json"));
+                    OffsetDateTime at = rs.getObject("created_at", OffsetDateTime.class);
+                    row.put("createdAt", at == null ? null : at.toString());
+                    return row;
+                });
+
+        return Map.of("results", results, "total", total == null ? 0 : total);
+    }
+
+    private static String escapeLike(String s) {
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+}
+```
+
+Using a table prefix other than `ce_audit` (`convengine.tables.AUDIT`)? Change the two `FROM ce_audit` clauses. Serving the endpoint somewhere else? Point the widget at it with `apiEndpoints.auditSearch`.
+
+A working copy lives in the `convengine-demo` app as `controller/AuditSearchController.java`.
+
 
 ## Publishing to npm
 

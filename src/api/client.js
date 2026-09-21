@@ -85,14 +85,30 @@ export function createApiClient(apiHost, apiEndpoints = {}) {
      * trail rather than needing a second renderer.
      *
      * @param {string} query   free text matched against stage and payload
-     * @param {object} [opts]  { limit }
+     * @param {object} [opts]
+     * @param {number} [opts.limit=50]
+     * @param {number} [opts.offset]
+     * @param {string|string[]} [opts.stage]  exact stage, or the NAME of a
+     *        withStage() form — RULE_MATCH also matches "RULE_MATCH (x)"
+     * @param {string} [opts.conversationId]
+     * @param {string} [opts.intent]   intent recorded in _meta at the time
+     * @param {string} [opts.state]    state recorded in _meta at the time
+     * @param {string} [opts.since]    ISO-8601
+     * @param {string} [opts.until]    ISO-8601
+     * @param {boolean} [opts.errorsOnly]
      * @returns {Promise<{results: Array, total: number}>}
      */
-    async searchAudit(query, { limit = 50 } = {}) {
+    async searchAudit(query, { limit = 50, ...filters } = {}) {
       const searchUrl = apiEndpoints?.auditSearch
         ? String(apiEndpoints.auditSearch).replace(/\/+$/, '')
         : `${url('audit')}/search`;
       const qs = new URLSearchParams({ q: query ?? '', limit: String(limit) });
+      // Optional filters go on the wire only when set, so a backend that
+      // implements just the base q/limit contract never sees params it rejects.
+      for (const [key, value] of Object.entries(filters)) {
+        if (value == null || value === '' || value === false) continue;
+        qs.set(key, Array.isArray(value) ? value.join(',') : String(value));
+      }
       const res = await fetch(`${searchUrl}?${qs}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },

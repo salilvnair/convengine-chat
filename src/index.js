@@ -60,3 +60,10 @@ export { ChatTypingIndicator } from './components/core/ChatTypingIndicator.jsx';
 export { AuditPanel }         from './components/core/AuditPanel.jsx';
 export { UserMessage }        from './components/user/UserMessage.jsx';
 export { AssistantMessage }   from './components/assistant/AssistantMessage.jsx';
+
+// ── Audit Explorer — full-page audit search & inspection ────────────────────
+export { AuditExplorer } from './components/explorer/AuditExplorer.jsx';
+export { AUDIT_EXPLORER_PALETTES } from './components/explorer/palettes.js';
+export { stageMeta, AUDIT_STAGE_FAMILIES, AUDIT_STAGE_LABELS } from './components/core/AuditStages.js';
+export { normalizeRows as normalizeAuditRows, buildConversations as buildAuditConversations } from './components/explorer/auditModel.js';
+export { auditExplorerHref } from './components/core/AuditExplorerButton.jsx';

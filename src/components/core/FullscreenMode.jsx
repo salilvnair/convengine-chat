@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useChat } from '../../hooks/useChat.js';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
 import { useIcons } from '../../hooks/useIcons.js';
+import { AuditExplorerButton } from './AuditExplorerButton.jsx';
 import { ChatActionsContext } from '../../context/ChatActionsContext.jsx';
 import { ChatArea } from '../core/ChatArea.jsx';
 import { AuditPanel } from '../core/AuditPanel.jsx';
@@ -189,6 +190,7 @@ export function FullscreenMode({ isDark, toggleTheme, actionsRef = null, subHead
                 {isDark ? <SunIcon /> : <MoonIcon />}
               </button>
             )}
+            <AuditExplorerButton />
             {config.showAudit && (
               <button
                 type="button"

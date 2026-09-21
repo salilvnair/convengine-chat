@@ -378,3 +378,26 @@ export function LandingAvatarIcon(props) {
     </svg>
   );
 }
+
+/** Opens the Audit Explorer — a magnifier over a trail of rows, so it reads
+ *  as "search the audit" rather than the panel toggle's plain list. */
+export function AuditExplorerIcon(props) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M4 6h9" />
+      <path d="M4 11h5" />
+      <path d="M4 16h4" />
+      <circle cx="16" cy="14" r="4" />
+      <path d="m19 17 2.5 2.5" />
+    </svg>
+  );
+}

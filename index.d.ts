@@ -209,6 +209,21 @@ export interface ConvEngineChatConfig {
   /** Search box in the audit panel. Typing filters the trail on screen; Enter
    *  searches every conversation via the audit search endpoint. @default true */
   showAuditSearch?: boolean;
+  /** Header button that opens the full-page Audit Explorer, deep-linked to the
+   *  current conversation. Needs auditExplorerUrl or onOpenAuditExplorer. @default false */
+  showAuditExplorer?: boolean;
+  /** Where the Audit Explorer lives, e.g. '/audit'. Opened as ?conversationId=<current>. */
+  auditExplorerUrl?: string;
+  /** Handle the button yourself (in-app routing). Wins over auditExplorerUrl. */
+  onOpenAuditExplorer?: (conversationId: string) => void;
+  /** window.open target. @default '_blank' */
+  auditExplorerTarget?: string;
+  /** Query parameter the conversation id is written to. @default 'conversationId' */
+  auditExplorerParam?: string;
+  /** false opens auditExplorerUrl without the conversation id. @default true */
+  auditExplorerLinkConversation?: boolean;
+  /** Button tooltip / aria-label. @default 'Open Audit Explorer' */
+  auditExplorerLabel?: string;
   /** Panel mode + `draggable` prop only. How the orb behaves when released:
    *  - `'edgeSnap'`  — snaps to the nearest left/right edge (iOS AssistiveTouch style)
    *  - `'freeform'`  — stays exactly wherever it's dropped, anywhere on the page
@@ -759,3 +774,145 @@ export declare function resolveAssistantRenderer(
 ): { key: string; Component: React.ComponentType<RendererComponentProps>; payload: unknown };
 
 export declare const DefaultRenderer: React.ComponentType<RendererComponentProps>;
+
+
+// ── Audit Explorer ────────────────────────────────────────────────────────────
+
+/** One row as GET /api/v1/conversation/audit/{conversationId} returns it. */
+export interface CeAuditRow {
+  auditId: number;
+  conversationId: string;
+  stage: string;
+  /** A JSON STRING — the engine stores payloads pre-encoded. */
+  payloadJson: string;
+  createdAt: string;
+}
+
+export type AuditStageFamily =
+  | 'input' | 'dialogue' | 'policy' | 'intent' | 'schema' | 'response' | 'agent'
+  | 'sql' | 'semantic' | 'rules' | 'orchestration' | 'lifecycle' | 'step' | 'error';
+
+export interface AuditExplorerPaletteColors {
+  ground?: string; surface?: string; surface2?: string;
+  ink?: string; ink2?: string; muted?: string;
+  line?: string; line2?: string;
+  accent?: string; accent2?: string; accentInk?: string;
+  codeBg?: string; string?: string; number?: string;
+  ok?: string; warn?: string; err?: string; llm?: string;
+}
+export type AuditExplorerPaletteName = 'aurora' | 'lagoon' | 'ember' | 'indigo';
+export type AuditExplorerPalette =
+  | AuditExplorerPaletteName
+  | { light?: AuditExplorerPaletteColors; dark?: AuditExplorerPaletteColors };
+
+export interface AuditExplorerFilters {
+  q?: string;
+  outcome?: 'all' | 'ok' | 'fail';
+  conversations?: string[];
+  families?: AuditStageFamily[];
+  intents?: string[];
+  states?: string[];
+  hideSteps?: boolean;
+  errorsOnly?: boolean;
+  llmOnly?: boolean;
+  changedOnly?: boolean;
+  inputParamsChanged?: boolean;
+  minPayloadKb?: number;
+}
+
+export interface AuditExplorerConfig {
+  // Data
+  apiHost?: string;
+  apiEndpoints?: ConvEngineChatApiEndpoints;
+  /** Static rows — skips all fetching. */
+  rows?: CeAuditRow[];
+  /** Open straight on one conversation (skips the landing page). */
+  conversationId?: string;
+  /** Always load these, in addition to search results. */
+  conversationIds?: string[];
+  /** Start with a search (skips the landing page). */
+  initialQuery?: string;
+  /** Rows per search page. @default 200 */
+  limit?: number;
+  /** Most search pages read to find enough conversations. @default 5 */
+  searchPageLimit?: number;
+  /** Most conversations loaded at once. @default 12 */
+  maxConversations?: number;
+  defaultFilters?: AuditExplorerFilters;
+
+  // Layout
+  showLanding?: boolean;
+  showSearch?: boolean;
+  showKpis?: boolean;
+  showApiReadout?: boolean;
+  showFilters?: boolean;
+  showWaterfall?: boolean;
+  showInspector?: boolean;
+  showRefresh?: boolean;
+  inspectorTabs?: Array<'io' | 'body' | 'meta' | 'raw'>;
+  defaultTab?: 'io' | 'body' | 'meta' | 'raw';
+  keyboardShortcuts?: boolean;
+  /** @default '100%' */
+  height?: string | number;
+
+  // Text
+  title?: string;
+  subtitle?: string;
+  landingTitle?: string;
+  landingSubtitle?: string;
+  landingExamples?: string[];
+  landingRecentLimit?: number;
+  landingQuickFilters?: boolean;
+
+  // Look
+  /** @default 'aurora' */
+  palette?: AuditExplorerPalette;
+  /** Preset a custom palette merges over. @default 'aurora' */
+  paletteBase?: AuditExplorerPaletteName;
+  /** Omit to follow the OS. */
+  colorScheme?: 'light' | 'dark';
+  defaultDark?: boolean;
+  fontFamily?: string;
+  monoFontFamily?: string;
+  /** Inject the IBM Plex <link>. @default true */
+  loadFonts?: boolean;
+  accentColor?: ColorValue; accentColor2?: ColorValue;
+  groundColor?: ColorValue; surfaceColor?: ColorValue; surfaceAltColor?: ColorValue;
+  textColor?: ColorValue; secondaryTextColor?: ColorValue; mutedTextColor?: ColorValue;
+  borderColor?: ColorValue; borderStrongColor?: ColorValue; codeBgColor?: ColorValue;
+  okColor?: ColorValue; warnColor?: ColorValue; errorColor?: ColorValue; llmColor?: ColorValue;
+
+  // Stages
+  stageLabels?: Record<string, string>;
+  familyColors?: Partial<Record<AuditStageFamily, string>>;
+  classifyStage?: (base: string) => AuditStageFamily | null | undefined;
+
+  // Callbacks
+  onSelectRow?: (row: CeAuditRow) => void;
+  onFiltersChange?: (filters: Required<AuditExplorerFilters>) => void;
+  onViewChange?: (view: 'landing' | 'explore') => void;
+  onError?: (error: Error) => void;
+}
+
+export interface AuditExplorerProps {
+  config?: AuditExplorerConfig;
+  /** CSS variable overrides, auto-prefixed with --ce- (e.g. 'ax-radius'). */
+  theme?: Record<string, string>;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export declare function AuditExplorer(props: AuditExplorerProps): React.ReactElement;
+export declare const AUDIT_EXPLORER_PALETTES: Record<AuditExplorerPaletteName, { light: Required<AuditExplorerPaletteColors>; dark: Required<AuditExplorerPaletteColors> }>;
+export declare const AUDIT_STAGE_FAMILIES: Record<AuditStageFamily, { color: string; label: string }>;
+export declare const AUDIT_STAGE_LABELS: Record<string, string>;
+export declare function stageMeta(stage: string, overrides?: {
+  labels?: Record<string, string>;
+  familyColors?: Partial<Record<AuditStageFamily, string>>;
+  classify?: (base: string) => AuditStageFamily | null | undefined;
+}): {
+  base: string; sub: string | null; label: string; color: string;
+  family: AuditStageFamily; familyLabel: string;
+  isError: boolean; severity: 'error' | 'warn' | null; isLlm: boolean;
+};
+export declare function auditExplorerHref(config: ConvEngineChatConfig, conversationId: string): string | null;
