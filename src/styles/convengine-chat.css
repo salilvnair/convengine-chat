@@ -3463,6 +3463,14 @@
   --ce-ax-grad: linear-gradient(90deg, var(--ce-ax-accent), var(--ce-ax-accent-2));
   /* Set to transparent to drop the ambient glow. */
   --ce-ax-glow: color-mix(in srgb, var(--ce-ax-accent) 10%, transparent);
+  /* Scrollbars: a thin pill in the palette's two accents. Override any of
+     these through the `theme` prop, e.g. theme={{ 'ax-scrollbar-size': '10px' }}. */
+  --ce-ax-scrollbar-size: 8px;
+  --ce-ax-scrollbar-track: color-mix(in srgb, var(--ce-ax-line) 45%, transparent);
+  --ce-ax-scrollbar-thumb: color-mix(in srgb, var(--ce-ax-accent) 60%, var(--ce-ax-line-2));
+  --ce-ax-scrollbar-thumb-2: color-mix(in srgb, var(--ce-ax-accent-2) 60%, var(--ce-ax-line-2));
+  --ce-ax-scrollbar-thumb-hover: var(--ce-ax-accent);
+  --ce-ax-scrollbar-thumb-hover-2: var(--ce-ax-accent-2);
 
   box-sizing: border-box;
   display: flex;
@@ -3483,6 +3491,45 @@
 .ce-ax button { cursor: pointer; }
 .ce-ax :focus-visible { outline: 2px solid var(--ce-ax-accent); outline-offset: 1px; border-radius: 4px; }
 .ce-ax code { font-family: var(--ce-ax-mono); }
+
+/* ── Scrollbars ──────────────────────────────────────────────────────────── */
+/* Every scrolling pane in the explorer (waterfall, row list, inspector, code
+   blocks) gets the same accent pill instead of the OS's grey bar. The thumb
+   is inset by a transparent border so it floats inside its track. */
+.ce-ax ::-webkit-scrollbar,
+.ce-ax::-webkit-scrollbar { width: var(--ce-ax-scrollbar-size); height: var(--ce-ax-scrollbar-size); }
+.ce-ax ::-webkit-scrollbar-track,
+.ce-ax::-webkit-scrollbar-track { background: var(--ce-ax-scrollbar-track); border-radius: 99px; }
+.ce-ax ::-webkit-scrollbar-thumb,
+.ce-ax::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--ce-ax-scrollbar-thumb), var(--ce-ax-scrollbar-thumb-2));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 99px;
+  min-height: 28px;
+}
+.ce-ax ::-webkit-scrollbar-thumb:horizontal,
+.ce-ax::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(90deg, var(--ce-ax-scrollbar-thumb), var(--ce-ax-scrollbar-thumb-2));
+  background-clip: padding-box;
+  min-width: 28px;
+}
+.ce-ax ::-webkit-scrollbar-thumb:hover,
+.ce-ax::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--ce-ax-scrollbar-thumb-hover), var(--ce-ax-scrollbar-thumb-hover-2));
+  background-clip: padding-box;
+}
+.ce-ax ::-webkit-scrollbar-corner,
+.ce-ax::-webkit-scrollbar-corner { background: transparent; }
+/* Firefox has no pseudo-elements, only two colours. Kept out of WebKit/Blink
+   on purpose: since Chrome 121 a set scrollbar-color replaces the
+   ::-webkit-scrollbar styling above, gradient pill included. */
+@supports not selector(::-webkit-scrollbar) {
+  .ce-ax, .ce-ax * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ce-ax-scrollbar-thumb) var(--ce-ax-scrollbar-track);
+  }
+}
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
 .ce-ax .ce-ax-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; flex: none; }

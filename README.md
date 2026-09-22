@@ -1310,6 +1310,8 @@ Colour shorthands: `accentColor`, `accentColor2`, `groundColor`, `surfaceColor`,
 
 CSS variables (`theme` keys drop the leading `--ce-`): `--ce-ax-ground`, `-surface`, `-surface-2`, `-ink`, `-ink-2`, `-muted`, `-line`, `-line-2`, `-accent`, `-accent-2`, `-accent-ink`, `-code-bg`, `-string`, `-number`, `-ok`, `-warn`, `-err`, `-llm`, `-glow` (set `transparent` to drop the ambient glow), `-radius`, `-gutter`, `-font-size`, `-filters-width`, `-inspector-width`, `-sans`, `-mono`.
 
+Scrollbars follow the palette: every scrolling pane gets a thin pill filled with the `accent` → `accent2` gradient, which turns fully saturated on hover (Firefox gets the flat `-scrollbar-thumb` colour). Tune them with `--ce-ax-scrollbar-size` (default `8px`), `-scrollbar-track`, `-scrollbar-thumb`, `-scrollbar-thumb-2`, `-scrollbar-thumb-hover` and `-scrollbar-thumb-hover-2`, e.g. `theme={{ 'ax-scrollbar-size': '10px', 'ax-scrollbar-track': 'transparent' }}`.
+
 The palettes are exported as `AUDIT_EXPLORER_PALETTES` if you want to build a picker.
 
 ### Audit search endpoint (ConvEngine 2.x.x)
