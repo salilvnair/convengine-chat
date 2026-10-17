@@ -3903,3 +3903,31 @@
 
 /* ── thinkingRenderer: the consumer's own in-progress view replaces the dots strip ── */
 .ce-chat-root .ce-message-thinking--custom .ce-message-content { flex: 1; min-width: 0; max-width: min(720px, 100%); }
+
+/* ── Coloured prose (prompts, replies) in the audit panel: textToHtml ─────── */
+.ce-chat-root .ce-audit-pre {
+  --ce-txt-head:   #7c3aed;
+  --ce-txt-num:    #ea580c;
+  --ce-txt-quote:  #047857;
+  --ce-txt-ph:     #db2777;
+  --ce-txt-code:   #0369a1;
+  --ce-txt-caps:   #b91c1c;
+  --ce-txt-ident:  #2563eb;
+}
+.ce-chat-root[data-ce-theme="dark"] .ce-audit-pre {
+  --ce-txt-head:   #c4b5fd;
+  --ce-txt-num:    #fdba74;
+  --ce-txt-quote:  #86efac;
+  --ce-txt-ph:     #f9a8d4;
+  --ce-txt-code:   #7dd3fc;
+  --ce-txt-caps:   #fca5a5;
+  --ce-txt-ident:  #93c5fd;
+}
+.ce-chat-root .ce-txt-head   { color: var(--ce-txt-head); font-weight: 700; }
+.ce-chat-root .ce-txt-num    { color: var(--ce-txt-num); font-weight: 700; }
+.ce-chat-root .ce-txt-bullet { color: var(--ce-txt-num); font-weight: 700; }
+.ce-chat-root .ce-txt-quote  { color: var(--ce-txt-quote); }
+.ce-chat-root .ce-txt-ph     { color: var(--ce-txt-ph); font-weight: 600; }
+.ce-chat-root .ce-txt-code   { color: var(--ce-txt-code); }
+.ce-chat-root .ce-txt-caps   { color: var(--ce-txt-caps); font-weight: 600; }
+.ce-chat-root .ce-txt-ident  { color: var(--ce-txt-ident); }

@@ -42,9 +42,41 @@ export function jsonToHtml(prettyText) {
   return out + esc(prettyText.slice(last));
 }
 
-/** HTML for any value: coloured when it is JSON, escaped plain text otherwise. */
+// inside a line of prose: "quoted" | ${placeholder} | `code` | CAPS words | schema.table names
+const INLINE = /(&quot;[^\n]*?&quot;|“[^”\n]*”)|(\$\{[^}\n]+\})|(`[^`\n]+`)|(\b[A-Z][A-Z0-9_]{2,}\b)|(\b[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)?\b)/g;
+
+function inlineHtml(escaped) {
+  return escaped.replace(INLINE, (m, q, ph, code, caps, ident) => {
+    if (q) return `<span class="ce-txt-quote">${m}</span>`;
+    if (ph) return `<span class="ce-txt-ph">${m}</span>`;
+    if (code) return `<span class="ce-txt-code">${m}</span>`;
+    if (caps) return `<span class="ce-txt-caps">${m}</span>`;
+    if (ident) return `<span class="ce-txt-ident">${m}</span>`;
+    return m;
+  });
+}
+
+/**
+ * Prose (a prompt, a reply) -> coloured HTML: numbered rules and bullets, "Heading:" lines,
+ * quoted text, ${placeholders}, `code`, CAPS keywords (NEVER, ALWAYS, SELECT…) and schema.table names.
+ */
+export function textToHtml(text) {
+  return String(text ?? '').split('\n').map((line) => {
+    const e = esc(line);
+    // "Rules:" / "── CATEGORIES ──" / "Schema/table correctness (PostgreSQL):" on a line of its own
+    if (/^\s*[^\s].{0,80}:\s*$/.test(line) && !/^\s*[-*•\d]/.test(line)) return `<span class="ce-txt-head">${e}</span>`;
+    if (/^\s*[─━=]{2,}.*[─━=]{2,}\s*$/.test(line)) return `<span class="ce-txt-head">${e}</span>`;
+    const num = /^(\s*)(\d+[.)])(\s.*)?$/.exec(e);
+    if (num) return `${num[1]}<span class="ce-txt-num">${num[2]}</span>${inlineHtml(num[3] ?? '')}`;
+    const bullet = /^(\s*)([-*•])(\s.*)$/.exec(e);
+    if (bullet) return `${bullet[1]}<span class="ce-txt-bullet">${bullet[2]}</span>${inlineHtml(bullet[3])}`;
+    return inlineHtml(e);
+  }).join('\n');
+}
+
+/** HTML for any value: coloured JSON when it is JSON, coloured prose otherwise. */
 export function valueToHtml(value) {
   const pretty = toPrettyJson(value);
   if (pretty != null) return jsonToHtml(pretty);
-  return esc(typeof value === 'string' ? value : String(value ?? ''));
+  return textToHtml(typeof value === 'string' ? value : String(value ?? ''));
 }
