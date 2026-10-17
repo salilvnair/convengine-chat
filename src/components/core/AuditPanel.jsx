@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useConvEngineChatContext } from '../../context/ConvEngineChatContext.jsx';
 import { useIcons } from '../../hooks/useIcons.js';
 import { stageMeta } from './AuditStages.js';
+import { valueToHtml } from '../../utils/jsonHighlight.js';
 
 /* ── Rendering strategy ──────────────────────────────────────────────────────
  * The engine writes 100+ distinct stages, each with its own payload shape, and
@@ -163,7 +164,7 @@ function Collapsible({ label, text, defaultOpen = false }) {
         <span className="ce-audit-field-label">{label}</span>
         <span className="ce-audit-collapsible-len">{value.length.toLocaleString()} chars</span>
       </button>
-      {open && <pre className="ce-audit-pre">{value}</pre>}
+      {open && <pre className="ce-audit-pre" dangerouslySetInnerHTML={{ __html: valueToHtml(value) }} />}
     </div>
   );
 }
@@ -216,7 +217,7 @@ function AuditEntry({ entry, index, showConversation = false, onOpenConversation
         {showRaw ? (
           <>
             <span className="ce-audit-raw-stage">{stage}</span>
-            <pre className="ce-audit-pre ce-audit-pre--raw">{prettyJson(data)}</pre>
+            <pre className="ce-audit-pre ce-audit-pre--raw" dangerouslySetInnerHTML={{ __html: valueToHtml(data) }} />
           </>
         ) : (
           <>

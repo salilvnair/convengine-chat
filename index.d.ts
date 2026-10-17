@@ -331,6 +331,11 @@ export interface ConvEngineChatConfig {
   icons?: ConvEngineChatIcons;
   /** Register custom message-type renderers. */
   renderers?: RendererDefinition[];
+  /**
+   * Your own in-progress view, shown next to the agent avatar while a reply is on its way, in place
+   * of the "Agent is thinking…" strip. Gets the latest progress text (VERBOSE events).
+   */
+  thinkingRenderer?: React.ComponentType<{ progressText: string; rawProgressText: string }>;
 
   // ── Lifecycle callbacks ────────────────────────────────────────────────────
   /** Fired when the user sends a message (raw text, before enrichment). */

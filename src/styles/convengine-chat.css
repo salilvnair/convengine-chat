@@ -3872,3 +3872,34 @@
 @media (prefers-reduced-motion: reduce) {
   .ce-ax * { transition: none !important; }
 }
+
+/* ── Coloured JSON in the audit panel (utils/jsonHighlight.js) ─────────────── */
+.ce-chat-root .ce-audit-pre {
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.55;
+  --ce-json-key:   #2563eb;
+  --ce-json-str:   #047857;
+  --ce-json-num:   #b45309;
+  --ce-json-bool:  #7c3aed;
+  --ce-json-null:  #be123c;
+  --ce-json-punct: #64748b;
+}
+.ce-chat-root[data-ce-theme="dark"] .ce-audit-pre {
+  --ce-json-key:   #7dd3fc;
+  --ce-json-str:   #86efac;
+  --ce-json-num:   #fbbf24;
+  --ce-json-bool:  #c4b5fd;
+  --ce-json-null:  #fda4af;
+  --ce-json-punct: #94a3b8;
+}
+.ce-chat-root .ce-json-key   { color: var(--ce-json-key); font-weight: 600; }
+.ce-chat-root .ce-json-str   { color: var(--ce-json-str); }
+.ce-chat-root .ce-json-num   { color: var(--ce-json-num); }
+.ce-chat-root .ce-json-bool  { color: var(--ce-json-bool); font-weight: 600; }
+.ce-chat-root .ce-json-null  { color: var(--ce-json-null); font-style: italic; }
+.ce-chat-root .ce-json-punct { color: var(--ce-json-punct); }
+
+/* ── thinkingRenderer: the consumer's own in-progress view replaces the dots strip ── */
+.ce-chat-root .ce-message-thinking--custom .ce-message-content { flex: 1; min-width: 0; max-width: min(720px, 100%); }

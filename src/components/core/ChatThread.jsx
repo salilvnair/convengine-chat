@@ -63,7 +63,7 @@ export function ChatThread({ threadRef, messages, isTyping, progressText, onFeed
         });
       })()}
 
-      {showTyping && <ChatTypingIndicator progressText={progressText} />}
+      {showTyping && <ChatTypingIndicator progressText={progressText} renderer={config.thinkingRenderer} />}
     </div>
   );
 }

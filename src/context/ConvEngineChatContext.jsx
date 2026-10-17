@@ -132,6 +132,8 @@ export function ConvEngineChatProvider({ config = {}, children }) {
       onOpenFullscreenTab:   config.onOpenFullscreenTab   ?? null,
       // ── Renderers & callbacks ──────────────────────────────────────────
       rendererProviders: Array.isArray(config.renderers) ? config.renderers : [],
+      // The consumer's own in-progress view (a component), in place of "Agent is thinking…"
+      thinkingRenderer: typeof config.thinkingRenderer === 'function' || (config.thinkingRenderer && typeof config.thinkingRenderer === 'object') ? config.thinkingRenderer : null,
       onMessage:  config.onMessage  ?? null,
       onResponse: config.onResponse ?? null,
       onSubmit:   config.onSubmit   ?? null,
