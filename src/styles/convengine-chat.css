@@ -2339,6 +2339,13 @@
   cursor: pointer;
   text-align: left;
 }
+.ce-chat-root .ce-audit-collapsible-row {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+}
+.ce-chat-root .ce-audit-collapsible-row .ce-audit-collapsible-head { flex: 1; min-width: 0; }
+.ce-chat-root .ce-audit-collapsible-row .ce-audit-copy-btn { flex: none; }
 .ce-chat-root .ce-audit-collapsible-len {
   margin-left: auto;
   font-size: 9px;

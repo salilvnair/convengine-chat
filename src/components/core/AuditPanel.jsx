@@ -151,6 +151,33 @@ function Chip({ label, value, raw }) {
   );
 }
 
+/** Copies `text` (a string, or a value shown as pretty JSON); a tick for a moment after. */
+function CopyButton({ text, title = 'Copy' }) {
+  const [copied, setCopied] = useState(false);
+  const copy = (e) => {
+    e.stopPropagation();
+    const value = typeof text === 'string' ? text : prettyJson(text);
+    navigator.clipboard?.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => undefined);
+  };
+  return (
+    <button type="button" className="ce-audit-copy-btn" title={copied ? 'Copied!' : title} aria-label={title} onClick={copy}>
+      {copied ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 /** A long value (prompt, context, SQL, tool rows) shown collapsed. */
 function Collapsible({ label, text, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -159,11 +186,14 @@ function Collapsible({ label, text, defaultOpen = false }) {
   if (!value || !value.trim()) return null;
   return (
     <div className={`ce-audit-collapsible ${open ? 'is-open' : ''}`}>
-      <button type="button" className="ce-audit-collapsible-head" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-        <ChevronDownIcon className={`ce-audit-chevron ${open ? 'ce-audit-chevron--open' : ''}`} />
-        <span className="ce-audit-field-label">{label}</span>
-        <span className="ce-audit-collapsible-len">{value.length.toLocaleString()} chars</span>
-      </button>
+      <div className="ce-audit-collapsible-row">
+        <button type="button" className="ce-audit-collapsible-head" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          <ChevronDownIcon className={`ce-audit-chevron ${open ? 'ce-audit-chevron--open' : ''}`} />
+          <span className="ce-audit-field-label">{label}</span>
+          <span className="ce-audit-collapsible-len">{value.length.toLocaleString()} chars</span>
+        </button>
+        <CopyButton text={value} title={`Copy ${String(label).toLowerCase()}`} />
+      </div>
       {open && <pre className="ce-audit-pre" dangerouslySetInnerHTML={{ __html: valueToHtml(value) }} />}
     </div>
   );
@@ -191,6 +221,7 @@ function AuditEntry({ entry, index, showConversation = false, onOpenConversation
         <span className="ce-audit-card-title">{meta.label}</span>
         {meta.sub && <span className="ce-audit-substage" title={stage}>{meta.sub}</span>}
         <span className="ce-audit-head-spacer" />
+        {showRaw && <CopyButton text={data} title="Copy raw payload" />}
         <button
           type="button"
           className={`ce-audit-raw-toggle ${showRaw ? 'is-active' : ''}`}
